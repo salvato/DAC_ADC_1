@@ -1,10 +1,10 @@
 #include "main.h"
 
-ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
-DAC_HandleTypeDef hdac;
-DMA_HandleTypeDef hdma_dac1;
-TIM_HandleTypeDef htim2;
+ADC_HandleTypeDef  hadc1;
+DMA_HandleTypeDef  hdma_adc1;
+DAC_HandleTypeDef  hdac;
+DMA_HandleTypeDef  hdma_dac1;
+TIM_HandleTypeDef  htim2;
 UART_HandleTypeDef huart2;
 
 void SystemClock_Config(void);
@@ -16,7 +16,7 @@ static void MX_DAC_Init(void);
 static void MX_TIM2_Init(void);
 
 
-#define DEBUG        // Define this if debugging with a LED connected to DAC Out
+//#define DEBUG        // Define this if debugging with a LED connected to DAC Out
 
 #ifdef DEBUG
   #define RAMP_FREQUENCY 1 // Hz
