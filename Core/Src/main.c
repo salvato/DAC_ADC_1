@@ -1,4 +1,6 @@
 #include "main.h"
+#include <string.h>
+#include <stdio.h>
 
 ADC_HandleTypeDef  hadc1;
 DMA_HandleTypeDef  hdma_adc1;
@@ -24,11 +26,21 @@ static void MX_TIM2_Init(void);
   #define RAMP_FREQUENCY 20 // Hz
 #endif
 
+#define DAC_BUFFERED
+
+typedef uint8_t bool;
+#define false 0
+#define true  !false
+
 #define NS 4096
 uint16_t Wave_LUT[NS];
-uint32_t adc_val[2*NS];
+uint16_t adc_val[2*NS];
+uint16_t txBuff[NS];
 uint16_t rampMin = 0;
 uint16_t rampMax = 4095;
+__IO bool ready_1_half=false;
+__IO bool ready_2_half=false;
+char buf[80];
 
 
 void
@@ -40,16 +52,17 @@ buildRamp(int16_t np, uint16_t min, uint16_t max, uint16_t* pRamp) {
 }
 
 
+// ADC1 In0 ==> PA0
+// DAC  Out ==> PA4
 int 
 main(void) {
     #ifdef DEBUG
-        for(int32_t i=0; i<NS/2; i++) {
-            Wave_LUT[i] = 4095;
-            Wave_LUT[NS/2+i] = 0;
-        }
+        buildRamp(NS, rampMin, rampMax, Wave_LUT);
     #else
         buildRamp(NS, rampMin, rampMax, Wave_LUT);
     #endif
+    ready_1_half = false;
+    ready_2_half = false;
 
     HAL_Init();
     SystemClock_Config();
@@ -61,22 +74,91 @@ main(void) {
     MX_DAC_Init();
     MX_TIM2_Init();
 
-    if(HAL_DAC_Start_DMA(&hdac, DAC_CHANNEL_1, (uint32_t*)Wave_LUT, NS, DAC_ALIGN_12B_R)) {
+    // uint8_t tx_buffer[5] = "hello\r\n";
+    // HAL_UART_Transmit(&huart2, tx_buffer, sizeof(tx_buffer), 10);
+
+    if(HAL_DAC_Start_DMA(&hdac,
+                         DAC_CHANNEL_1, 
+                         (uint32_t*)Wave_LUT, 
+                         NS, 
+                         DAC_ALIGN_12B_R))
         Error_Handler(); 
-    }
-    if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc_val, 2*NS) != HAL_OK) {
+
+    if(HAL_ADC_Start_DMA(&hadc1,
+                         (uint32_t*)&adc_val,
+                         2*NS))
         Error_Handler(); 
-    }
-    if(HAL_TIM_Base_Start(&htim2) != HAL_OK) {
+
+    if(HAL_TIM_Base_Start(&htim2))
         Error_Handler();
-    }
-    // start pwm generation
-    if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1) != HAL_OK)
+    
+    // start pwm generation (is This needed ?)
+    if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1))
         Error_Handler();
 
     while (1) {
+        if(ready_1_half) {
+            ready_1_half = false;
+            HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
+            memcpy(txBuff, adc_val, NS*sizeof(*adc_val));
+        }
+        if(ready_2_half) {
+            ready_2_half = false;
+            HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
+            memcpy(txBuff, &adc_val[NS], NS*sizeof(*adc_val));
+            // for(int i=0; i<NS; i++) {
+            //     sprintf(buf, "buf[%d]=%d\n", i, txBuff[i]);
+            //     HAL_UART_Transmit(&huart2, (uint8_t*)buf, strlen(buf), 10);
+            // }
+            // while(1);
+        }
     }
 }
+
+/*
+void
+SystemClock_Config(void) {
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  // Configure the main internal regulator output voltage
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  // Initializes the RCC Oscillators according to the specified parameters
+  // in the RCC_OscInitTypeDef structure.
+
+  RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM            = 16;
+  RCC_OscInitStruct.PLL.PLLN            = 360;
+  RCC_OscInitStruct.PLL.PLLP            = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ            = 7;
+  RCC_OscInitStruct.PLL.PLLR            = 6;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+    Error_Handler();
+  }
+
+  // Activate the Over-Drive mode
+  if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
+    Error_Handler();
+  }
+
+  // Initializes the CPU, AHB and APB buses clocks
+  RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK|
+                                     RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
+    Error_Handler();
+  }
+}
+*/
 
 
 void 
@@ -102,7 +184,7 @@ SystemClock_Config(void) {
     }
 
     RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK|
-                                      RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+                                       RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
     RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
     RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
     RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -133,6 +215,8 @@ MX_ADC1_Init(void) {
     if (HAL_ADC_Init(&hadc1) != HAL_OK) {
         Error_Handler();
     }
+    // The total conversion time is calculated as follows:
+    // Tconv = ADC_SAMPLETIME + 12 cycles
     sConfig.Channel      = ADC_CHANNEL_0;
     sConfig.Rank         = 1;
     sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
@@ -149,8 +233,12 @@ MX_DAC_Init(void) {
     if (HAL_DAC_Init(&hdac) != HAL_OK) {
         Error_Handler();
     }
-    sConfig.DAC_Trigger      = DAC_TRIGGER_T2_TRGO;
-    sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
+    sConfig.DAC_Trigger          = DAC_TRIGGER_T2_TRGO;
+    #ifdef DAC_BUFFERED
+        sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
+    #else
+        sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_DISABLE;
+    #endif
     if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_1) != HAL_OK) {
         Error_Handler();
     }
@@ -184,9 +272,9 @@ MX_TIM2_Init(void) {
         Error_Handler();
     }
     // Serve ?
-    if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
-        Error_Handler();
-    }
+    // if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
+    //     Error_Handler();
+    // }
     sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
     sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
@@ -217,10 +305,11 @@ MX_USART2_UART_Init(void) {
     }
 }
 
+
 static void 
 MX_DMA_Init(void) {
-    __HAL_RCC_DMA2_CLK_ENABLE();
-    __HAL_RCC_DMA1_CLK_ENABLE();
+    __HAL_RCC_DMA1_CLK_ENABLE(); // Used by DAC
+    __HAL_RCC_DMA2_CLK_ENABLE(); // Used by ADC
 
     /* DMA1_Stream5_IRQn interrupt configuration */
     HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
@@ -268,3 +357,21 @@ void
 assert_failed(uint8_t *file, uint32_t line) {
 }
 #endif /* USE_FULL_ASSERT */
+
+
+
+/// ADC Conversion_Half_Complete callback
+void
+HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hAdc) {
+    UNUSED(hAdc);
+    ready_1_half = true;
+}
+
+
+/// ADC Conversion_Complete callback
+void
+HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hAdc) {
+    UNUSED(hAdc);
+    ready_2_half = true;
+}
+

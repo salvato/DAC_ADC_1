@@ -264,11 +264,9 @@ void TIM6_DAC_IRQHandler(void)
 void DMA2_Stream0_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA2_Stream0_IRQn 0 */
-  HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
   /* USER CODE END DMA2_Stream0_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_adc1);
   /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
-
   /* USER CODE END DMA2_Stream0_IRQn 1 */
 }
 

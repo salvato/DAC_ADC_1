@@ -1,4 +1,4 @@
-ARM GAS  /tmp/cc6oSWZR.s 			page 1
+ARM GAS  /tmp/ccpMVjOp.s 			page 1
 
 
    1              		.cpu cortex-m4
@@ -58,7 +58,7 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
   28:Core/Src/stm32f4xx_it.c **** /* USER CODE BEGIN TD */
   29:Core/Src/stm32f4xx_it.c **** 
   30:Core/Src/stm32f4xx_it.c **** /* USER CODE END TD */
-ARM GAS  /tmp/cc6oSWZR.s 			page 2
+ARM GAS  /tmp/ccpMVjOp.s 			page 2
 
 
   31:Core/Src/stm32f4xx_it.c **** 
@@ -118,7 +118,7 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
   78:Core/Src/stm32f4xx_it.c ****   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
   79:Core/Src/stm32f4xx_it.c ****   while (1)
   36              		.loc 1 79 3 discriminator 1 view .LVU1
-ARM GAS  /tmp/cc6oSWZR.s 			page 3
+ARM GAS  /tmp/ccpMVjOp.s 			page 3
 
 
   80:Core/Src/stm32f4xx_it.c ****   {
@@ -178,7 +178,7 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
   75              	MemManage_Handler:
   76              	.LFB237:
   98:Core/Src/stm32f4xx_it.c **** }
-ARM GAS  /tmp/cc6oSWZR.s 			page 4
+ARM GAS  /tmp/ccpMVjOp.s 			page 4
 
 
   99:Core/Src/stm32f4xx_it.c **** 
@@ -238,7 +238,7 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
  123:Core/Src/stm32f4xx_it.c ****   while (1)
  108              		.loc 1 123 3 discriminator 1 view .LVU13
  124:Core/Src/stm32f4xx_it.c ****   {
-ARM GAS  /tmp/cc6oSWZR.s 			page 5
+ARM GAS  /tmp/ccpMVjOp.s 			page 5
 
 
  125:Core/Src/stm32f4xx_it.c ****     /* USER CODE BEGIN W1_BusFault_IRQn 0 */
@@ -298,7 +298,7 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
  147              	SVC_Handler:
  148              	.LFB240:
  143:Core/Src/stm32f4xx_it.c **** }
-ARM GAS  /tmp/cc6oSWZR.s 			page 6
+ARM GAS  /tmp/ccpMVjOp.s 			page 6
 
 
  144:Core/Src/stm32f4xx_it.c **** 
@@ -358,7 +358,7 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
  180              		.align	1
  181              		.global	PendSV_Handler
  182              		.syntax unified
-ARM GAS  /tmp/cc6oSWZR.s 			page 7
+ARM GAS  /tmp/ccpMVjOp.s 			page 7
 
 
  183              		.thumb
@@ -418,7 +418,7 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
  217              		.loc 1 192 3 view .LVU27
  218 0002 FFF7FEFF 		bl	HAL_IncTick
  219              	.LVL0:
-ARM GAS  /tmp/cc6oSWZR.s 			page 8
+ARM GAS  /tmp/ccpMVjOp.s 			page 8
 
 
  193:Core/Src/stm32f4xx_it.c ****   /* USER CODE BEGIN SysTick_IRQn 1 */
@@ -478,7 +478,7 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
  251              	.L18:
  252 000c 00000000 		.word	hdma_dac1
  253              		.cfi_endproc
-ARM GAS  /tmp/cc6oSWZR.s 			page 9
+ARM GAS  /tmp/ccpMVjOp.s 			page 9
 
 
  254              	.LFE244:
@@ -538,7 +538,7 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
  233:Core/Src/stm32f4xx_it.c **** /**
  234:Core/Src/stm32f4xx_it.c ****   * @brief This function handles TIM2 global interrupt.
  235:Core/Src/stm32f4xx_it.c ****   */
-ARM GAS  /tmp/cc6oSWZR.s 			page 10
+ARM GAS  /tmp/ccpMVjOp.s 			page 10
 
 
  236:Core/Src/stm32f4xx_it.c **** void TIM2_IRQHandler(void)
@@ -598,7 +598,7 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
  253:Core/Src/stm32f4xx_it.c **** 
  254:Core/Src/stm32f4xx_it.c ****   /* USER CODE END TIM6_DAC_IRQn 0 */
  255:Core/Src/stm32f4xx_it.c ****   HAL_DAC_IRQHandler(&hdac);
-ARM GAS  /tmp/cc6oSWZR.s 			page 11
+ARM GAS  /tmp/ccpMVjOp.s 			page 11
 
 
  336              		.loc 1 255 3 view .LVU39
@@ -641,84 +641,75 @@ ARM GAS  /tmp/cc6oSWZR.s 			page 1
  365              		.cfi_offset 3, -8
  366              		.cfi_offset 14, -4
  266:Core/Src/stm32f4xx_it.c ****   /* USER CODE BEGIN DMA2_Stream0_IRQn 0 */
- 267:Core/Src/stm32f4xx_it.c ****   HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
- 367              		.loc 1 267 3 view .LVU42
- 368 0002 2021     		movs	r1, #32
- 369 0004 0348     		ldr	r0, .L34
- 370 0006 FFF7FEFF 		bl	HAL_GPIO_TogglePin
- 371              	.LVL5:
- 268:Core/Src/stm32f4xx_it.c ****   /* USER CODE END DMA2_Stream0_IRQn 0 */
- 269:Core/Src/stm32f4xx_it.c ****   HAL_DMA_IRQHandler(&hdma_adc1);
- 372              		.loc 1 269 3 view .LVU43
- 373 000a 0348     		ldr	r0, .L34+4
- 374 000c FFF7FEFF 		bl	HAL_DMA_IRQHandler
- 375              	.LVL6:
- 270:Core/Src/stm32f4xx_it.c ****   /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
- 271:Core/Src/stm32f4xx_it.c **** 
- 272:Core/Src/stm32f4xx_it.c ****   /* USER CODE END DMA2_Stream0_IRQn 1 */
- 273:Core/Src/stm32f4xx_it.c **** }
- 376              		.loc 1 273 1 is_stmt 0 view .LVU44
-ARM GAS  /tmp/cc6oSWZR.s 			page 12
+ 267:Core/Src/stm32f4xx_it.c ****   /* USER CODE END DMA2_Stream0_IRQn 0 */
+ 268:Core/Src/stm32f4xx_it.c ****   HAL_DMA_IRQHandler(&hdma_adc1);
+ 367              		.loc 1 268 3 view .LVU42
+ 368 0002 0248     		ldr	r0, .L34
+ 369 0004 FFF7FEFF 		bl	HAL_DMA_IRQHandler
+ 370              	.LVL5:
+ 269:Core/Src/stm32f4xx_it.c ****   /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
+ 270:Core/Src/stm32f4xx_it.c ****   /* USER CODE END DMA2_Stream0_IRQn 1 */
+ 271:Core/Src/stm32f4xx_it.c **** }
+ 371              		.loc 1 271 1 is_stmt 0 view .LVU43
+ 372 0008 08BD     		pop	{r3, pc}
+ 373              	.L35:
+ 374 000a 00BF     		.align	2
+ 375              	.L34:
+ 376 000c 00000000 		.word	hdma_adc1
+ 377              		.cfi_endproc
+ 378              	.LFE248:
+ARM GAS  /tmp/ccpMVjOp.s 			page 12
 
 
- 377 0010 08BD     		pop	{r3, pc}
- 378              	.L35:
- 379 0012 00BF     		.align	2
- 380              	.L34:
- 381 0014 00000240 		.word	1073872896
- 382 0018 00000000 		.word	hdma_adc1
- 383              		.cfi_endproc
- 384              	.LFE248:
- 386              		.text
- 387              	.Letext0:
- 388              		.file 2 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
- 389              		.file 3 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h"
- 390              		.file 4 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h"
- 391              		.file 5 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h"
- 392              		.file 6 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h"
- 393              		.file 7 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h"
- 394              		.file 8 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dac.h"
- 395              		.file 9 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h"
- 396              		.file 10 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h"
- 397              		.file 11 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h"
-ARM GAS  /tmp/cc6oSWZR.s 			page 13
+ 380              		.text
+ 381              	.Letext0:
+ 382              		.file 2 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h"
+ 383              		.file 3 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
+ 384              		.file 4 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h"
+ 385              		.file 5 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h"
+ 386              		.file 6 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h"
+ 387              		.file 7 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h"
+ 388              		.file 8 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dac.h"
+ 389              		.file 9 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h"
+ 390              		.file 10 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h"
+ARM GAS  /tmp/ccpMVjOp.s 			page 13
 
 
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 stm32f4xx_it.c
-     /tmp/cc6oSWZR.s:18     .text.NMI_Handler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:26     .text.NMI_Handler:0000000000000000 NMI_Handler
-     /tmp/cc6oSWZR.s:44     .text.HardFault_Handler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:51     .text.HardFault_Handler:0000000000000000 HardFault_Handler
-     /tmp/cc6oSWZR.s:68     .text.MemManage_Handler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:75     .text.MemManage_Handler:0000000000000000 MemManage_Handler
-     /tmp/cc6oSWZR.s:92     .text.BusFault_Handler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:99     .text.BusFault_Handler:0000000000000000 BusFault_Handler
-     /tmp/cc6oSWZR.s:116    .text.UsageFault_Handler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:123    .text.UsageFault_Handler:0000000000000000 UsageFault_Handler
-     /tmp/cc6oSWZR.s:140    .text.SVC_Handler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:147    .text.SVC_Handler:0000000000000000 SVC_Handler
-     /tmp/cc6oSWZR.s:160    .text.DebugMon_Handler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:167    .text.DebugMon_Handler:0000000000000000 DebugMon_Handler
-     /tmp/cc6oSWZR.s:180    .text.PendSV_Handler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:187    .text.PendSV_Handler:0000000000000000 PendSV_Handler
-     /tmp/cc6oSWZR.s:200    .text.SysTick_Handler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:207    .text.SysTick_Handler:0000000000000000 SysTick_Handler
-     /tmp/cc6oSWZR.s:226    .text.DMA1_Stream5_IRQHandler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:233    .text.DMA1_Stream5_IRQHandler:0000000000000000 DMA1_Stream5_IRQHandler
-     /tmp/cc6oSWZR.s:252    .text.DMA1_Stream5_IRQHandler:000000000000000c $d
-     /tmp/cc6oSWZR.s:257    .text.ADC_IRQHandler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:264    .text.ADC_IRQHandler:0000000000000000 ADC_IRQHandler
-     /tmp/cc6oSWZR.s:283    .text.ADC_IRQHandler:000000000000000c $d
-     /tmp/cc6oSWZR.s:288    .text.TIM2_IRQHandler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:295    .text.TIM2_IRQHandler:0000000000000000 TIM2_IRQHandler
-     /tmp/cc6oSWZR.s:314    .text.TIM2_IRQHandler:000000000000000c $d
-     /tmp/cc6oSWZR.s:319    .text.TIM6_DAC_IRQHandler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:326    .text.TIM6_DAC_IRQHandler:0000000000000000 TIM6_DAC_IRQHandler
-     /tmp/cc6oSWZR.s:345    .text.TIM6_DAC_IRQHandler:000000000000000c $d
-     /tmp/cc6oSWZR.s:350    .text.DMA2_Stream0_IRQHandler:0000000000000000 $t
-     /tmp/cc6oSWZR.s:357    .text.DMA2_Stream0_IRQHandler:0000000000000000 DMA2_Stream0_IRQHandler
-     /tmp/cc6oSWZR.s:381    .text.DMA2_Stream0_IRQHandler:0000000000000014 $d
+     /tmp/ccpMVjOp.s:18     .text.NMI_Handler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:26     .text.NMI_Handler:0000000000000000 NMI_Handler
+     /tmp/ccpMVjOp.s:44     .text.HardFault_Handler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:51     .text.HardFault_Handler:0000000000000000 HardFault_Handler
+     /tmp/ccpMVjOp.s:68     .text.MemManage_Handler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:75     .text.MemManage_Handler:0000000000000000 MemManage_Handler
+     /tmp/ccpMVjOp.s:92     .text.BusFault_Handler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:99     .text.BusFault_Handler:0000000000000000 BusFault_Handler
+     /tmp/ccpMVjOp.s:116    .text.UsageFault_Handler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:123    .text.UsageFault_Handler:0000000000000000 UsageFault_Handler
+     /tmp/ccpMVjOp.s:140    .text.SVC_Handler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:147    .text.SVC_Handler:0000000000000000 SVC_Handler
+     /tmp/ccpMVjOp.s:160    .text.DebugMon_Handler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:167    .text.DebugMon_Handler:0000000000000000 DebugMon_Handler
+     /tmp/ccpMVjOp.s:180    .text.PendSV_Handler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:187    .text.PendSV_Handler:0000000000000000 PendSV_Handler
+     /tmp/ccpMVjOp.s:200    .text.SysTick_Handler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:207    .text.SysTick_Handler:0000000000000000 SysTick_Handler
+     /tmp/ccpMVjOp.s:226    .text.DMA1_Stream5_IRQHandler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:233    .text.DMA1_Stream5_IRQHandler:0000000000000000 DMA1_Stream5_IRQHandler
+     /tmp/ccpMVjOp.s:252    .text.DMA1_Stream5_IRQHandler:000000000000000c $d
+     /tmp/ccpMVjOp.s:257    .text.ADC_IRQHandler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:264    .text.ADC_IRQHandler:0000000000000000 ADC_IRQHandler
+     /tmp/ccpMVjOp.s:283    .text.ADC_IRQHandler:000000000000000c $d
+     /tmp/ccpMVjOp.s:288    .text.TIM2_IRQHandler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:295    .text.TIM2_IRQHandler:0000000000000000 TIM2_IRQHandler
+     /tmp/ccpMVjOp.s:314    .text.TIM2_IRQHandler:000000000000000c $d
+     /tmp/ccpMVjOp.s:319    .text.TIM6_DAC_IRQHandler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:326    .text.TIM6_DAC_IRQHandler:0000000000000000 TIM6_DAC_IRQHandler
+     /tmp/ccpMVjOp.s:345    .text.TIM6_DAC_IRQHandler:000000000000000c $d
+     /tmp/ccpMVjOp.s:350    .text.DMA2_Stream0_IRQHandler:0000000000000000 $t
+     /tmp/ccpMVjOp.s:357    .text.DMA2_Stream0_IRQHandler:0000000000000000 DMA2_Stream0_IRQHandler
+     /tmp/ccpMVjOp.s:376    .text.DMA2_Stream0_IRQHandler:000000000000000c $d
 
 UNDEFINED SYMBOLS
 HAL_IncTick
@@ -730,5 +721,4 @@ HAL_TIM_IRQHandler
 htim2
 HAL_DAC_IRQHandler
 hdac
-HAL_GPIO_TogglePin
 hdma_adc1
