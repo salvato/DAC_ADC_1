@@ -27,6 +27,17 @@ static void MX_TIM2_Init(void);
 #define NS 4096
 uint16_t Wave_LUT[NS];
 uint32_t adc_val[2*NS];
+uint16_t rampMin = 0;
+uint16_t rampMax = 4095;
+
+
+void
+buildRamp(int16_t np, uint16_t min, uint16_t max, uint16_t* pRamp) {
+    float factor = (float)(max-min)/(float)np;
+    for(int16_t i=0; i<np; i++) {
+        pRamp[i] = (uint16_t)(min+factor*i);
+    }
+}
 
 
 int 
@@ -37,9 +48,7 @@ main(void) {
             Wave_LUT[NS/2+i] = 0;
         }
     #else
-        for(int32_t i=0; i<NS; i++) {
-            Wave_LUT[i] = i;
-        }
+        buildRamp(NS, rampMin, rampMax, Wave_LUT);
     #endif
 
     HAL_Init();
@@ -150,8 +159,12 @@ MX_DAC_Init(void) {
 
 static void
 MX_TIM2_Init(void) {
-    uint32_t periodValue = (uint32_t)((SystemCoreClock)/(RAMP_FREQUENCY*NS)) - 1;
-    uint32_t prescalerValue = 0;//(uint32_t)((RAMP_FREQUENCY*NS)/(SystemCoreClock)) - 1;
+    uint32_t periodValue = (uint32_t)((SystemCoreClock)/(RAMP_FREQUENCY*NS));
+    if(periodValue < 2) {
+        Error_Handler();
+    }
+    periodValue -= 1;
+    uint32_t prescalerValue = 0;
 
     TIM_ClockConfigTypeDef sClockSourceConfig = {0};
     TIM_MasterConfigTypeDef sMasterConfig = {0};
@@ -171,9 +184,9 @@ MX_TIM2_Init(void) {
         Error_Handler();
     }
     // Serve ?
-    // if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
-    //     Error_Handler();
-    // }
+    if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
+        Error_Handler();
+    }
     sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
     sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
