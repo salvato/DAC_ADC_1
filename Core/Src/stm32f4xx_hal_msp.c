@@ -140,18 +140,16 @@ HAL_ADC_MspInit(ADC_HandleTypeDef* hadc) {
         HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
         hdma_adc2.Instance = DMA2_Stream2;
-        hdma_adc2.Init.Channel = DMA_CHANNEL_0;
+        hdma_adc2.Init.Channel = DMA_CHANNEL_1;
         hdma_adc2.Init.Direction = DMA_PERIPH_TO_MEMORY;
         hdma_adc2.Init.PeriphInc = DMA_PINC_DISABLE;
         hdma_adc2.Init.MemInc = DMA_MINC_ENABLE;
-        hdma_adc2.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-        hdma_adc2.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+        hdma_adc2.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+        hdma_adc2.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
         hdma_adc2.Init.Mode = DMA_CIRCULAR;
-        hdma_adc2.Init.Priority = DMA_PRIORITY_HIGH;
+        hdma_adc2.Init.Priority = DMA_PRIORITY_LOW;
         hdma_adc2.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
         hdma_adc2.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
-        hdma_adc2.Init.MemBurst = DMA_MBURST_SINGLE;
-        hdma_adc2.Init.PeriphBurst = DMA_PBURST_SINGLE; 
         HAL_DMA_Init(&hdma_adc2);
         
         __HAL_LINKDMA(hadc, DMA_Handle, hdma_adc2);
