@@ -1,4 +1,7 @@
 *.o
 *.lst
 *.hex
+*.d
+*.bin
+*.map
 
