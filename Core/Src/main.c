@@ -4,20 +4,26 @@
 
 ADC_HandleTypeDef  hadc1;
 DMA_HandleTypeDef  hdma_adc1;
+ADC_HandleTypeDef  hadc2;
+DMA_HandleTypeDef  hdma_adc2;
+
 DAC_HandleTypeDef  hdac;
 DMA_HandleTypeDef  hdma_dac1;
 TIM_HandleTypeDef  htim2;
 UART_HandleTypeDef huart2;
 
 void SystemClock_Config(void);
+void SystemClockHSE_Config(void) ;
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_ADC2_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_DAC_Init(void);
 static void MX_TIM2_Init(void);
 
-
+#define HSE_BYPASS
+//#define OVERCLOCK    // Define this to increase CPU Clock
 //#define DEBUG        // Define this if debugging with a LED connected to DAC Out
 
 #ifdef DEBUG
@@ -33,14 +39,19 @@ typedef uint8_t bool;
 #define true  !false
 
 #define NS 4096
-uint16_t Wave_LUT[NS];
+#define AVERNUM RAMP_FREQUENCY
+uint16_t Ramp[NS];
 uint16_t adc_val[2*NS];
 uint16_t txBuff[NS];
+uint32_t avg[NS];
+uint16_t nAvg;
 uint16_t rampMin = 0;
 uint16_t rampMax = 4095;
 __IO bool ready_1_half=false;
 __IO bool ready_2_half=false;
-char buf[80];
+bool bNewData;
+char outBuff[80];
+bool bNewRamp = false;
 
 
 void
@@ -52,34 +63,39 @@ buildRamp(int16_t np, uint16_t min, uint16_t max, uint16_t* pRamp) {
 }
 
 
-// ADC1 In0 ==> PA0
-// DAC  Out ==> PA4
+// ADC1 In0  ==> PA0
+// DAC  Out  ==> PA4
+// ADC2_In14 ==> PC4
+// ADC2_In15 ==> PC5
+
+
 int 
 main(void) {
     #ifdef DEBUG
-        buildRamp(NS, rampMin, rampMax, Wave_LUT);
+        buildRamp(NS, rampMin, rampMax, Ramp);
     #else
-        buildRamp(NS, rampMin, rampMax, Wave_LUT);
+        buildRamp(NS, rampMin, rampMax, Ramp);
     #endif
     ready_1_half = false;
     ready_2_half = false;
+    memset(avg, 0, sizeof(avg));
+    nAvg = 0;
 
     HAL_Init();
-    SystemClock_Config();
+    // SystemClock_Config();
+    SystemClockHSE_Config();
 
     MX_GPIO_Init();
     MX_DMA_Init();
     MX_ADC1_Init();
+    MX_ADC2_Init();
     MX_USART2_UART_Init();
     MX_DAC_Init();
     MX_TIM2_Init();
 
-    // uint8_t tx_buffer[5] = "hello\r\n";
-    // HAL_UART_Transmit(&huart2, tx_buffer, sizeof(tx_buffer), 10);
-
     if(HAL_DAC_Start_DMA(&hdac,
                          DAC_CHANNEL_1, 
-                         (uint32_t*)Wave_LUT, 
+                         (uint32_t*)Ramp, 
                          NS, 
                          DAC_ALIGN_12B_R))
         Error_Handler(); 
@@ -93,29 +109,153 @@ main(void) {
         Error_Handler();
     
     // start pwm generation (is This needed ?)
-    if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1))
-        Error_Handler();
+    // if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1))
+    //     Error_Handler();
 
+    bNewData = false;
     while (1) {
         if(ready_1_half) {
             ready_1_half = false;
             HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
             memcpy(txBuff, adc_val, NS*sizeof(*adc_val));
+            bNewData = true;
         }
-        if(ready_2_half) {
+        else if(ready_2_half) {
             ready_2_half = false;
             HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
             memcpy(txBuff, &adc_val[NS], NS*sizeof(*adc_val));
-            // for(int i=0; i<NS; i++) {
-            //     sprintf(buf, "buf[%d]=%d\n", i, txBuff[i]);
-            //     HAL_UART_Transmit(&huart2, (uint8_t*)buf, strlen(buf), 10);
-            // }
-            // while(1);
+            bNewData = true;
         }
-    }
+        else {
+            if(bNewData) {
+                bNewData = false;
+                for(int i=0; i<NS; i++) {
+                    avg[i] += txBuff[i];
+                }
+                nAvg++;
+                if(nAvg >= AVERNUM) {
+                    HAL_TIM_Base_Stop(&htim2);
+                    HAL_DAC_Stop_DMA(&hdac, DAC_CHANNEL_1);
+                    HAL_ADC_Stop_DMA(&hadc1);
+                    for(int i=0; i<NS; i++) {
+                        avg[i] = avg[i]/AVERNUM;
+                        //sprintf(outBuff, "i=%d f=%ld\n\r", i, avg[i]);
+                        //HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen(outBuff), 10);
+                    }
+                    nAvg = 0;
+                    memset(avg, 0, sizeof(avg));
+                    if(HAL_ADC_Start_IT(&hadc2) != HAL_OK)
+                        Error_Handler();
+                    ready_1_half = false;
+                    ready_2_half = false;
+                    HAL_DAC_Start_DMA(&hdac, DAC_CHANNEL_1, (uint32_t*)Ramp, NS, DAC_ALIGN_12B_R);
+                    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc_val, 2*NS);
+                    HAL_TIM_Base_Start(&htim2);
+                }
+            }
+            // HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
+        }
+        if(bNewRamp) {
+            bNewRamp = false;
+            rampMin = (uint16_t)HAL_ADC_GetValue(&hadc2);
+            rampMax = (uint16_t)HAL_ADC_GetValue(&hadc2);
+            sprintf(outBuff, "Ramp Min=%d Ramp Max=%d\n\r", rampMin, rampMax);
+            HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen(outBuff), 10);
+        }
+    } // while(true)
 }
 
-/*
+
+/**
+  * @brief  System Clock Configuration
+  *         The system Clock is configured as follow : 
+  *            System Clock source            = PLL (HSE_CRYSTAL or HSE_BYPASS) 
+  *            SYSCLK(Hz)                     = 180000000
+  *            HCLK(Hz)                       = 180000000
+  *            AHB Prescaler                  = 1
+  *            APB1 Prescaler                 = 4
+  *            APB2 Prescaler                 = 2
+  *            HSE Frequency(Hz)              = 8000000
+  *            PLL_M                          = 8
+  *            PLL_N                          = 360
+  *            PLL_P                          = 2
+  *            PLL_Q                          = 7
+  *            VDD(V)                         = 3.3
+  *            Main regulator output voltage  = Scale1 mode
+  *            Flash Latency(WS)              = 5
+  * @param  None
+  * @retval None
+  */
+void
+SystemClockHSE_Config(void) {
+  RCC_ClkInitTypeDef RCC_ClkInitStruct;
+  RCC_OscInitTypeDef RCC_OscInitStruct;
+  HAL_StatusTypeDef ret = HAL_OK;
+    
+  /* Enable Power Control clock */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  
+  /* The voltage scaling allows optimizing the power consumption when the device is 
+     clocked below the maximum system frequency, to update the voltage scaling value 
+     regarding system frequency refer to product datasheet.  */
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  /* -1- Select HSI as system clock source to allow modification of the PLL configuration */
+  RCC_ClkInitStruct.ClockType    = RCC_CLOCKTYPE_SYSCLK;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
+    Error_Handler();
+  }
+  
+  /* -2- Enable HSE Oscillator, select it as PLL source and finally activate the PLL */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  
+#ifdef HSE_CRYSTAL  
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+#elif defined (HSE_BYPASS)
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+#endif /* HSE_CRYSTAL */
+  RCC_OscInitStruct.PLL.PLLState  = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM      = 8;
+  RCC_OscInitStruct.PLL.PLLN      = 360;
+  RCC_OscInitStruct.PLL.PLLP      = RCC_PLLP_DIV2; 
+  RCC_OscInitStruct.PLL.PLLQ      = 7;
+  RCC_OscInitStruct.PLL.PLLR      = 6;
+  if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+    /* Initialization Error */
+    Error_Handler();
+  }
+  
+   /* Activate the OverDrive to reach the 180 MHz Frequency */  
+  ret = HAL_PWREx_EnableOverDrive();
+  if(ret != HAL_OK) {
+    while(1) { ; }
+  }
+  /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 
+     clocks dividers */
+  RCC_ClkInitStruct.ClockType      = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | 
+                                      RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+  RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;  
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;  
+  if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
+    Error_Handler();
+  }
+  
+  /* -4- Optional: Disable HSI Oscillator (if the HSI is no more needed by the application) */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState       = RCC_HSI_OFF;
+  RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE;
+  if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+    Error_Handler();
+  }
+}
+
+
+
+#ifdef OVERCLOCK
 void
 SystemClock_Config(void) {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -158,8 +298,8 @@ SystemClock_Config(void) {
     Error_Handler();
   }
 }
-*/
 
+#else // Not OVERCLOCK
 
 void 
 SystemClock_Config(void) {
@@ -194,6 +334,7 @@ SystemClock_Config(void) {
         Error_Handler();
     }
 }
+#endif // OVERCLOCK
 
 
 static void
@@ -219,10 +360,60 @@ MX_ADC1_Init(void) {
     // Tconv = ADC_SAMPLETIME + 12 cycles
     sConfig.Channel      = ADC_CHANNEL_0;
     sConfig.Rank         = 1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+    sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES;//ADC_SAMPLETIME_3CYCLES;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
         Error_Handler();
     }
+}
+
+
+/**
+  * @brief ADC2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void 
+MX_ADC2_Init(void) {
+
+  /* USER CODE BEGIN ADC2_Init 0 */
+  /* USER CODE END ADC2_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC2_Init 1 */
+  /* USER CODE END ADC2_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc2.Instance = ADC2;
+  hadc2.Init.ClockPrescaler        = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc2.Init.Resolution            = ADC_RESOLUTION_12B;
+  hadc2.Init.ScanConvMode          = ENABLE;
+  hadc2.Init.ContinuousConvMode    = DISABLE;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
+  hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.NbrOfConversion       = 2;
+  hadc2.Init.DMAContinuousRequests = DISABLE;
+  hadc2.Init.EOCSelection          = ADC_EOC_SEQ_CONV;
+  if (HAL_ADC_Init(&hadc2) != HAL_OK) {
+      Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel      = ADC_CHANNEL_14;
+  sConfig.Rank         = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK) {
+      Error_Handler();
+  }
+  sConfig.Channel      = ADC_CHANNEL_15;
+  sConfig.Rank         = 2;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK) {
+      Error_Handler();
+  }
 }
 
 
@@ -309,14 +500,19 @@ MX_USART2_UART_Init(void) {
 static void 
 MX_DMA_Init(void) {
     __HAL_RCC_DMA1_CLK_ENABLE(); // Used by DAC
-    __HAL_RCC_DMA2_CLK_ENABLE(); // Used by ADC
+    __HAL_RCC_DMA2_CLK_ENABLE(); // Used by ADC1 & ADC2
 
-    /* DMA1_Stream5_IRQn interrupt configuration */
+    /* DMA1_Stream5_IRQn interrupt configuration (DAC) */
     HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
-    /* DMA2_Stream0_IRQn interrupt configuration */
+
+    /* DMA2_Stream0_IRQn interrupt configuration (ADC1) */
     HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+
+    /* DMA2_Stream2_IRQn interrupt configuration (ADC2) */
+    HAL_NVIC_SetPriority(DMA2_Stream4_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMA2_Stream4_IRQn);
 }
 
 
@@ -363,15 +559,20 @@ assert_failed(uint8_t *file, uint32_t line) {
 /// ADC Conversion_Half_Complete callback
 void
 HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hAdc) {
-    UNUSED(hAdc);
-    ready_1_half = true;
+    if(hAdc == &hadc1) {
+        ready_1_half = true;
+    }
 }
 
 
 /// ADC Conversion_Complete callback
 void
 HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hAdc) {
-    UNUSED(hAdc);
-    ready_2_half = true;
+    if(hAdc == &hadc1) {
+        ready_2_half = true;
+    }
+    else if(hAdc == &hadc2) {
+        bNewRamp = true;
+    }
 }
 

@@ -58,6 +58,7 @@ void Error_Handler(void);
 
 /* Private defines -----------------------------------------------------------*/
 #define hadc1 hadc1
+#define hadc2 hadc2
 #define htim2 htim2
 #define hdac1 hdac
 #define B1_Pin GPIO_PIN_13

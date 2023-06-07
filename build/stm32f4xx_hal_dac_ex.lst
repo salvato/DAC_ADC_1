@@ -1,4 +1,4 @@
-ARM GAS  /tmp/cccdOLEq.s 			page 1
+ARM GAS  /tmp/ccRuFgsS.s 			page 1
 
 
    1              		.cpu cortex-m4
@@ -58,7 +58,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
   27:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****      *** Dual mode IO operation ***
   28:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****      ==============================
   29:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****      [..]
-ARM GAS  /tmp/cccdOLEq.s 			page 2
+ARM GAS  /tmp/ccRuFgsS.s 			page 2
 
 
   30:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****       (+) When Dual mode is enabled (i.e. DAC Channel1 and Channel2 are used simultaneously) :
@@ -118,7 +118,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
   84:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****       (+) Stop conversion and disable DMA transfer.
   85:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****       (+) Get result of conversion.
   86:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****       (+) Get result of dual mode conversion.
-ARM GAS  /tmp/cccdOLEq.s 			page 3
+ARM GAS  /tmp/ccRuFgsS.s 			page 3
 
 
   87:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** 
@@ -178,7 +178,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
   58 0020 1360     		str	r3, [r2]
  113:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** 
  114:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   /* Check if software trigger enabled */
-ARM GAS  /tmp/cccdOLEq.s 			page 4
+ARM GAS  /tmp/ccRuFgsS.s 			page 4
 
 
  115:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   if ((hdac->Instance->CR & (DAC_CR_TEN1 | DAC_CR_TSEL1)) == DAC_TRIGGER_SOFTWARE)
@@ -238,7 +238,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  132:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   /* Return function status */
  133:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   return HAL_OK;
   95              		.loc 1 133 3 view .LVU26
-ARM GAS  /tmp/cccdOLEq.s 			page 5
+ARM GAS  /tmp/ccRuFgsS.s 			page 5
 
 
   96              		.loc 1 133 10 is_stmt 0 view .LVU27
@@ -298,7 +298,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  137              		@ args = 0, pretend = 0, frame = 0
  138              		@ frame_needed = 0, uses_anonymous_args = 0
  139              		@ link register save eliminated.
-ARM GAS  /tmp/cccdOLEq.s 			page 6
+ARM GAS  /tmp/ccRuFgsS.s 			page 6
 
 
  144:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** 
@@ -358,7 +358,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  166:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   *          This parameter can be one of the following values:
  167:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   *            @arg DAC_TRIANGLEAMPLITUDE_1: Select max triangle amplitude of 1
  168:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   *            @arg DAC_TRIANGLEAMPLITUDE_3: Select max triangle amplitude of 3
-ARM GAS  /tmp/cccdOLEq.s 			page 7
+ARM GAS  /tmp/ccRuFgsS.s 			page 7
 
 
  169:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   *            @arg DAC_TRIANGLEAMPLITUDE_7: Select max triangle amplitude of 7
@@ -418,7 +418,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  201 0018 01F01001 		and	r1, r1, #16
  202              	.LVL11:
  203              		.loc 1 194 3 is_stmt 0 discriminator 2 view .LVU54
-ARM GAS  /tmp/cccdOLEq.s 			page 8
+ARM GAS  /tmp/ccRuFgsS.s 			page 8
 
 
  204 001c 4FF47C6C 		mov	ip, #4032
@@ -478,7 +478,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  248              	HAL_DACEx_NoiseWaveGenerate:
  249              	.LVL16:
  250              	.LFB238:
-ARM GAS  /tmp/cccdOLEq.s 			page 9
+ARM GAS  /tmp/ccRuFgsS.s 			page 9
 
 
  206:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** 
@@ -538,7 +538,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  239:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** 
  240:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   /* Change DAC state */
  241:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   hdac->State = HAL_DAC_STATE_BUSY;
-ARM GAS  /tmp/cccdOLEq.s 			page 10
+ARM GAS  /tmp/ccRuFgsS.s 			page 10
 
 
  271              		.loc 1 241 3 discriminator 2 view .LVU74
@@ -598,7 +598,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  310 003e 0220     		movs	r0, #2
  311              	.LVL21:
  312              		.loc 1 255 1 view .LVU88
-ARM GAS  /tmp/cccdOLEq.s 			page 11
+ARM GAS  /tmp/ccRuFgsS.s 			page 11
 
 
  313 0040 7047     		bx	lr
@@ -658,7 +658,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  340 0000 0829     		cmp	r1, #8
  341 0002 06D0     		beq	.L26
  285:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   {
-ARM GAS  /tmp/cccdOLEq.s 			page 12
+ARM GAS  /tmp/ccRuFgsS.s 			page 12
 
 
  286:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****     data = ((uint32_t)Data2 << 8U) | Data1;
@@ -718,7 +718,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  378              		.syntax unified
  379              		.thumb
  380              		.thumb_func
-ARM GAS  /tmp/cccdOLEq.s 			page 13
+ARM GAS  /tmp/ccRuFgsS.s 			page 13
 
 
  381              		.fpu fpv4-sp-d16
@@ -778,7 +778,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  327:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   /* Prevent unused argument(s) compilation warning */
  328:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   UNUSED(hdac);
  413              		.loc 1 328 3 view .LVU115
-ARM GAS  /tmp/cccdOLEq.s 			page 14
+ARM GAS  /tmp/ccRuFgsS.s 			page 14
 
 
  329:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** 
@@ -838,7 +838,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  451              	.LFB243:
  350:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** 
  351:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** /**
-ARM GAS  /tmp/cccdOLEq.s 			page 15
+ARM GAS  /tmp/ccRuFgsS.s 			page 15
 
 
  352:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   * @brief  DMA underrun DAC callback for Channel2.
@@ -898,7 +898,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  386:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** 
  387:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** #if defined(DAC_CHANNEL2_SUPPORT)
  388:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** /**
-ARM GAS  /tmp/cccdOLEq.s 			page 16
+ARM GAS  /tmp/ccRuFgsS.s 			page 16
 
 
  389:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   * @brief  Return the last data output value of the selected DAC channel.
@@ -958,7 +958,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  409:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   */
  410:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** /**
  411:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   * @}
-ARM GAS  /tmp/cccdOLEq.s 			page 17
+ARM GAS  /tmp/ccRuFgsS.s 			page 17
 
 
  412:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c ****   */
@@ -1018,7 +1018,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  537              	.LFE245:
  539              		.section	.text.DAC_DMAHalfConvCpltCh2,"ax",%progbits
  540              		.align	1
-ARM GAS  /tmp/cccdOLEq.s 			page 18
+ARM GAS  /tmp/ccRuFgsS.s 			page 18
 
 
  541              		.global	DAC_DMAHalfConvCpltCh2
@@ -1078,7 +1078,7 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  581              	.LVL45:
  582              	.LFB247:
  456:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** 
-ARM GAS  /tmp/cccdOLEq.s 			page 19
+ARM GAS  /tmp/ccRuFgsS.s 			page 19
 
 
  457:Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c **** /**
@@ -1138,43 +1138,43 @@ ARM GAS  /tmp/cccdOLEq.s 			page 1
  617              		.text
  618              	.Letext0:
  619              		.file 2 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h"
-ARM GAS  /tmp/cccdOLEq.s 			page 20
+ARM GAS  /tmp/ccRuFgsS.s 			page 20
 
 
  620              		.file 3 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
  621              		.file 4 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h"
  622              		.file 5 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h"
  623              		.file 6 "Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dac.h"
-ARM GAS  /tmp/cccdOLEq.s 			page 21
+ARM GAS  /tmp/ccRuFgsS.s 			page 21
 
 
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 stm32f4xx_hal_dac_ex.c
-     /tmp/cccdOLEq.s:18     .text.HAL_DACEx_DualStart:0000000000000000 $t
-     /tmp/cccdOLEq.s:26     .text.HAL_DACEx_DualStart:0000000000000000 HAL_DACEx_DualStart
-     /tmp/cccdOLEq.s:125    .text.HAL_DACEx_DualStop:0000000000000000 $t
-     /tmp/cccdOLEq.s:132    .text.HAL_DACEx_DualStop:0000000000000000 HAL_DACEx_DualStop
-     /tmp/cccdOLEq.s:164    .text.HAL_DACEx_TriangleWaveGenerate:0000000000000000 $t
-     /tmp/cccdOLEq.s:171    .text.HAL_DACEx_TriangleWaveGenerate:0000000000000000 HAL_DACEx_TriangleWaveGenerate
-     /tmp/cccdOLEq.s:241    .text.HAL_DACEx_NoiseWaveGenerate:0000000000000000 $t
-     /tmp/cccdOLEq.s:248    .text.HAL_DACEx_NoiseWaveGenerate:0000000000000000 HAL_DACEx_NoiseWaveGenerate
-     /tmp/cccdOLEq.s:318    .text.HAL_DACEx_DualSetValue:0000000000000000 $t
-     /tmp/cccdOLEq.s:325    .text.HAL_DACEx_DualSetValue:0000000000000000 HAL_DACEx_DualSetValue
-     /tmp/cccdOLEq.s:376    .text.HAL_DACEx_ConvCpltCallbackCh2:0000000000000000 $t
-     /tmp/cccdOLEq.s:383    .text.HAL_DACEx_ConvCpltCallbackCh2:0000000000000000 HAL_DACEx_ConvCpltCallbackCh2
-     /tmp/cccdOLEq.s:398    .text.HAL_DACEx_ConvHalfCpltCallbackCh2:0000000000000000 $t
-     /tmp/cccdOLEq.s:405    .text.HAL_DACEx_ConvHalfCpltCallbackCh2:0000000000000000 HAL_DACEx_ConvHalfCpltCallbackCh2
-     /tmp/cccdOLEq.s:420    .text.HAL_DACEx_ErrorCallbackCh2:0000000000000000 $t
-     /tmp/cccdOLEq.s:427    .text.HAL_DACEx_ErrorCallbackCh2:0000000000000000 HAL_DACEx_ErrorCallbackCh2
-     /tmp/cccdOLEq.s:442    .text.HAL_DACEx_DMAUnderrunCallbackCh2:0000000000000000 $t
-     /tmp/cccdOLEq.s:449    .text.HAL_DACEx_DMAUnderrunCallbackCh2:0000000000000000 HAL_DACEx_DMAUnderrunCallbackCh2
-     /tmp/cccdOLEq.s:464    .text.HAL_DACEx_DualGetValue:0000000000000000 $t
-     /tmp/cccdOLEq.s:471    .text.HAL_DACEx_DualGetValue:0000000000000000 HAL_DACEx_DualGetValue
-     /tmp/cccdOLEq.s:500    .text.DAC_DMAConvCpltCh2:0000000000000000 $t
-     /tmp/cccdOLEq.s:507    .text.DAC_DMAConvCpltCh2:0000000000000000 DAC_DMAConvCpltCh2
-     /tmp/cccdOLEq.s:540    .text.DAC_DMAHalfConvCpltCh2:0000000000000000 $t
-     /tmp/cccdOLEq.s:547    .text.DAC_DMAHalfConvCpltCh2:0000000000000000 DAC_DMAHalfConvCpltCh2
-     /tmp/cccdOLEq.s:573    .text.DAC_DMAErrorCh2:0000000000000000 $t
-     /tmp/cccdOLEq.s:580    .text.DAC_DMAErrorCh2:0000000000000000 DAC_DMAErrorCh2
+     /tmp/ccRuFgsS.s:18     .text.HAL_DACEx_DualStart:0000000000000000 $t
+     /tmp/ccRuFgsS.s:26     .text.HAL_DACEx_DualStart:0000000000000000 HAL_DACEx_DualStart
+     /tmp/ccRuFgsS.s:125    .text.HAL_DACEx_DualStop:0000000000000000 $t
+     /tmp/ccRuFgsS.s:132    .text.HAL_DACEx_DualStop:0000000000000000 HAL_DACEx_DualStop
+     /tmp/ccRuFgsS.s:164    .text.HAL_DACEx_TriangleWaveGenerate:0000000000000000 $t
+     /tmp/ccRuFgsS.s:171    .text.HAL_DACEx_TriangleWaveGenerate:0000000000000000 HAL_DACEx_TriangleWaveGenerate
+     /tmp/ccRuFgsS.s:241    .text.HAL_DACEx_NoiseWaveGenerate:0000000000000000 $t
+     /tmp/ccRuFgsS.s:248    .text.HAL_DACEx_NoiseWaveGenerate:0000000000000000 HAL_DACEx_NoiseWaveGenerate
+     /tmp/ccRuFgsS.s:318    .text.HAL_DACEx_DualSetValue:0000000000000000 $t
+     /tmp/ccRuFgsS.s:325    .text.HAL_DACEx_DualSetValue:0000000000000000 HAL_DACEx_DualSetValue
+     /tmp/ccRuFgsS.s:376    .text.HAL_DACEx_ConvCpltCallbackCh2:0000000000000000 $t
+     /tmp/ccRuFgsS.s:383    .text.HAL_DACEx_ConvCpltCallbackCh2:0000000000000000 HAL_DACEx_ConvCpltCallbackCh2
+     /tmp/ccRuFgsS.s:398    .text.HAL_DACEx_ConvHalfCpltCallbackCh2:0000000000000000 $t
+     /tmp/ccRuFgsS.s:405    .text.HAL_DACEx_ConvHalfCpltCallbackCh2:0000000000000000 HAL_DACEx_ConvHalfCpltCallbackCh2
+     /tmp/ccRuFgsS.s:420    .text.HAL_DACEx_ErrorCallbackCh2:0000000000000000 $t
+     /tmp/ccRuFgsS.s:427    .text.HAL_DACEx_ErrorCallbackCh2:0000000000000000 HAL_DACEx_ErrorCallbackCh2
+     /tmp/ccRuFgsS.s:442    .text.HAL_DACEx_DMAUnderrunCallbackCh2:0000000000000000 $t
+     /tmp/ccRuFgsS.s:449    .text.HAL_DACEx_DMAUnderrunCallbackCh2:0000000000000000 HAL_DACEx_DMAUnderrunCallbackCh2
+     /tmp/ccRuFgsS.s:464    .text.HAL_DACEx_DualGetValue:0000000000000000 $t
+     /tmp/ccRuFgsS.s:471    .text.HAL_DACEx_DualGetValue:0000000000000000 HAL_DACEx_DualGetValue
+     /tmp/ccRuFgsS.s:500    .text.DAC_DMAConvCpltCh2:0000000000000000 $t
+     /tmp/ccRuFgsS.s:507    .text.DAC_DMAConvCpltCh2:0000000000000000 DAC_DMAConvCpltCh2
+     /tmp/ccRuFgsS.s:540    .text.DAC_DMAHalfConvCpltCh2:0000000000000000 $t
+     /tmp/ccRuFgsS.s:547    .text.DAC_DMAHalfConvCpltCh2:0000000000000000 DAC_DMAHalfConvCpltCh2
+     /tmp/ccRuFgsS.s:573    .text.DAC_DMAErrorCh2:0000000000000000 $t
+     /tmp/ccRuFgsS.s:580    .text.DAC_DMAErrorCh2:0000000000000000 DAC_DMAErrorCh2
 
 NO UNDEFINED SYMBOLS
