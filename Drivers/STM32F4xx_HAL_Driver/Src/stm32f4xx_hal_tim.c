@@ -396,16 +396,15 @@ __weak void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef *htim)
   * @param  htim TIM Base handle
   * @retval HAL status
   */
-HAL_StatusTypeDef HAL_TIM_Base_Start(TIM_HandleTypeDef *htim)
-{
+HAL_StatusTypeDef 
+HAL_TIM_Base_Start(TIM_HandleTypeDef *htim) {
   uint32_t tmpsmcr;
 
   /* Check the parameters */
   assert_param(IS_TIM_INSTANCE(htim->Instance));
 
   /* Check the TIM state */
-  if (htim->State != HAL_TIM_STATE_READY)
-  {
+  if (htim->State != HAL_TIM_STATE_READY) {
     return HAL_ERROR;
   }
 
@@ -413,22 +412,20 @@ HAL_StatusTypeDef HAL_TIM_Base_Start(TIM_HandleTypeDef *htim)
   htim->State = HAL_TIM_STATE_BUSY;
 
   /* Enable the Peripheral, except in trigger mode where enable is automatically done with trigger */
-  if (IS_TIM_SLAVE_INSTANCE(htim->Instance))
-  {
+  if (IS_TIM_SLAVE_INSTANCE(htim->Instance)) {
     tmpsmcr = htim->Instance->SMCR & TIM_SMCR_SMS;
-    if (!IS_TIM_SLAVEMODE_TRIGGER_ENABLED(tmpsmcr))
-    {
+    if (!IS_TIM_SLAVEMODE_TRIGGER_ENABLED(tmpsmcr)) {
       __HAL_TIM_ENABLE(htim);
     }
   }
-  else
-  {
+  else {
     __HAL_TIM_ENABLE(htim);
   }
 
   /* Return function status */
   return HAL_OK;
 }
+
 
 /**
   * @brief  Stops the TIM Base generation.

@@ -60,6 +60,7 @@ void Error_Handler(void);
 #define hadc1 hadc1
 #define hadc2 hadc2
 #define htim2 htim2
+#define htim3 htim3
 #define hdac1 hdac
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
