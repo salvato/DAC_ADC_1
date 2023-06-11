@@ -5,6 +5,7 @@
 
 // DAC  Out1 ==> PA4 Ramp Generator
 // ADC1 In0  ==> PA0 Analog Input Values
+// ADC1 In1  ==> PA1 Analog Input Values
 // ADC2_In10 ==> PC0 Ramp Min Value Selection
 // ADC2_In11 ==> PC1 Ramp Max Value Selection
 
@@ -34,20 +35,18 @@ static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void buildRamp(uint16_t min, uint16_t max);
 static void handlePotVals(int np, uint16_t* trimVal);
-
-#define HSE_BYPASS
-//#define OVERCLOCK    // Define this to increase CPU Clock
+static void startAcquisition();
+static void stopAcquisition();
 
 //#define DEBUG        // Define this if debugging with a LED connected to DAC Out
+#define HSE_BYPASS
+#define DAC_BUFFERED
+#define TRIM_SAMPLING_FREQUENCY 10
 #ifdef DEBUG
     #define RAMP_FREQUENCY 1 // Hz
 #else
     #define RAMP_FREQUENCY 20 // Hz
 #endif
-
-#define TRIM_SAMPLING_FREQUENCY 10
-
-#define DAC_BUFFERED
 
 typedef uint8_t bool;
 #define false 0
@@ -55,7 +54,7 @@ typedef uint8_t bool;
 
 #define NS 4096
 uint16_t Ramp[NS];      // Output Ramp
-uint16_t adc1Val[2*NS]; // Space for two Ramps (double buffer)
+uint16_t adc1Val[4*NS]; // Space for two Ramps (double buffer)
 uint16_t txBuff[NS];
 uint32_t avg[NS];
 
@@ -68,10 +67,11 @@ uint16_t adc2Val[2*ADC_RAMP_BUFFER_LENGTH];
 uint16_t rampMin = 0;
 uint16_t rampMax = 4095;
 
-__IO bool adc1HalfReady=false;
-__IO bool adc1FullReady=false;
-__IO bool adc2HalfReady=false;
-__IO bool adc2FullReady=false;
+__IO bool adc1HalfReady = false;
+__IO bool adc1FullReady = false;
+__IO bool adc2HalfReady = false;
+__IO bool adc2FullReady = false;
+__IO bool pbPressed     = false;
 
 char outBuff[80];
 
@@ -101,11 +101,52 @@ handlePotVals(int np, uint16_t* trimVal) {
         rampMin = min;
         rampMax = max;
         buildRamp(rampMin, rampMax);
-        sprintf(outBuff, "Ramp Min=%d Ramp Max=%d\n\r", rampMin, rampMax);
-        HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen(outBuff), 10);
+        // sprintf(outBuff, "Ramp Min=%d Ramp Max=%d\n\r", rampMin, rampMax);
+        // HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen(outBuff), 10);
     }
 }
 
+
+void
+startAcquisition() {
+    if(HAL_DAC_Start_DMA(&hdac, DAC1_CHANNEL_1, (uint32_t*)Ramp, NS, DAC_ALIGN_12B_R))
+        Error_Handler(); 
+
+    if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc1Val, 4*NS))
+        Error_Handler(); 
+
+    if(HAL_ADC_Start_DMA(&hadc2, (uint32_t*)&adc2Val, 2*ADC_RAMP_BUFFER_LENGTH))
+        Error_Handler(); 
+
+    if(HAL_TIM_Base_Start(&htim2))
+        Error_Handler();
+
+    if(HAL_TIM_Base_Start(&htim3))
+        Error_Handler();
+    
+    // start pwm generation (is This needed ?)
+    // if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1))
+    //     Error_Handler();
+
+    // start pwm generation (is This needed ?)
+    // if(HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1))
+    //     Error_Handler();
+}
+
+
+void
+stopAcquisition() {
+    if(HAL_TIM_Base_Stop(&htim2))
+        Error_Handler();
+    if(HAL_TIM_Base_Stop(&htim3))
+        Error_Handler();
+    if(HAL_DAC_Stop_DMA(&hdac, DAC1_CHANNEL_1))
+        Error_Handler(); 
+    if(HAL_ADC_Stop_DMA(&hadc1))
+        Error_Handler(); 
+    if(HAL_ADC_Stop_DMA(&hadc2))
+        Error_Handler(); 
+}
 
 
 int 
@@ -125,7 +166,7 @@ main(void) {
     SystemClockHSE_Config();
 
     MX_GPIO_Init();
-    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+    // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
     MX_DMA_Init();
     MX_ADC1_Init();
     MX_ADC2_Init();
@@ -134,41 +175,21 @@ main(void) {
     MX_TIM2_Init();
     MX_TIM3_Init();
 
-    if(HAL_DAC_Start_DMA(&hdac, DAC1_CHANNEL_1, (uint32_t*)Ramp, NS, DAC_ALIGN_12B_R))
-        Error_Handler(); 
-
-    if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc1Val, 2*NS))
-        Error_Handler(); 
-
-    if(HAL_ADC_Start_DMA(&hadc2, (uint32_t*)&adc2Val, 2*ADC_RAMP_BUFFER_LENGTH))
-        Error_Handler(); 
-
-    if(HAL_TIM_Base_Start(&htim2))
-        Error_Handler();
-
-    if(HAL_TIM_Base_Start(&htim3))
-        Error_Handler();
-    
-    // start pwm generation (is This needed ?)
-    // if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1))
-    //     Error_Handler();
-
-    // if(HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1))
-    //     Error_Handler();
-
     bool bNewData = false;
+
+    startAcquisition();
 
     while (1) {
         if(adc1HalfReady) {
             adc1HalfReady = false;
             HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
-            // memcpy(txBuff, adc1Val, NS*sizeof(*adc1Val));
+            memcpy(txBuff, adc1Val, 2*NS*sizeof(*adc1Val));
             bNewData = true;
         }
         if(adc1FullReady) {
             adc1FullReady = false;
             HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
-            memcpy(txBuff, &adc1Val[NS], NS*sizeof(*adc1Val));
+            memcpy(txBuff, &adc1Val[2*NS], 2*NS*sizeof(*adc1Val));
             bNewData = true;
         }
 
@@ -184,6 +205,17 @@ main(void) {
         }
         if(bNewData) {
             bNewData = false;
+        }
+        if(pbPressed) {
+            stopAcquisition();
+            HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+            for(int i=0; i<NS; i++) {
+                sprintf(outBuff, "Dac=%d Adc0=%d Adc1=%d\n\r", Ramp[i], adc1Val[2*i], adc1Val[2*i+1]);
+                HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen(outBuff), 10);
+            }
+            pbPressed = false;
+            startAcquisition();
+            HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
         }
 /*        
         else {
@@ -286,14 +318,13 @@ SystemClockHSE_Config(void) {
   RCC_OscInitStruct.PLL.PLLQ      = 7;
   RCC_OscInitStruct.PLL.PLLR      = 6;
   if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-    /* Initialization Error */
-    Error_Handler();
+      Error_Handler();
   }
   
    /* Activate the OverDrive to reach the 180 MHz Frequency */  
   ret = HAL_PWREx_EnableOverDrive();
   if(ret != HAL_OK) {
-    while(1) { ; }
+        while(1) { ; }
   }
   /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 
      clocks dividers */
@@ -304,7 +335,7 @@ SystemClockHSE_Config(void) {
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;  
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;  
   if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
-    Error_Handler();
+      Error_Handler();
   }
   
   /* -4- Optional: Disable HSI Oscillator (if the HSI is no more needed by the application) */
@@ -312,92 +343,9 @@ SystemClockHSE_Config(void) {
   RCC_OscInitStruct.HSIState       = RCC_HSI_OFF;
   RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE;
   if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-    Error_Handler();
+      Error_Handler();
   }
 }
-
-
-
-#ifdef OVERCLOCK
-void
-SystemClock_Config(void) {
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-
-  // Configure the main internal regulator output voltage
-  __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  // Initializes the RCC Oscillators according to the specified parameters
-  // in the RCC_OscInitTypeDef structure.
-
-  RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM            = 16;
-  RCC_OscInitStruct.PLL.PLLN            = 360;
-  RCC_OscInitStruct.PLL.PLLP            = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ            = 7;
-  RCC_OscInitStruct.PLL.PLLR            = 6;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-    Error_Handler();
-  }
-
-  // Activate the Over-Drive mode
-  if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
-    Error_Handler();
-  }
-
-  // Initializes the CPU, AHB and APB buses clocks
-  RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK|
-                                     RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
-    Error_Handler();
-  }
-}
-
-#else // Not OVERCLOCK
-
-void 
-SystemClock_Config(void) {
-    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-
-    __HAL_RCC_PWR_CLK_ENABLE();
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
-
-    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
-    RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
-    RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
-    RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSI;
-    RCC_OscInitStruct.PLL.PLLM            = 16;
-    RCC_OscInitStruct.PLL.PLLN            = 336;
-    RCC_OscInitStruct.PLL.PLLP            = RCC_PLLP_DIV4;
-    RCC_OscInitStruct.PLL.PLLQ            = 2;
-    RCC_OscInitStruct.PLL.PLLR            = 2;
-    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-        Error_Handler();
-    }
-
-    RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK|
-                                       RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-    RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
-    RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-
-    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK) {
-        Error_Handler();
-    }
-}
-#endif // OVERCLOCK
 
 
 static void
@@ -407,15 +355,15 @@ MX_ADC1_Init(void) {
     hadc1.Instance = ADC1;
     hadc1.Init.ClockPrescaler        = ADC_CLOCK_SYNC_PCLK_DIV4; // The clock is common for all the ADCs.
     hadc1.Init.Resolution            = ADC_RESOLUTION_12B;
-    hadc1.Init.ScanConvMode          = DISABLE;
+    hadc1.Init.ScanConvMode          = ENABLE;
     hadc1.Init.ContinuousConvMode    = DISABLE;
     hadc1.Init.DiscontinuousConvMode = DISABLE;
     hadc1.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc1.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T2_TRGO;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc1.Init.NbrOfConversion       = 1;
+    hadc1.Init.NbrOfConversion       = 2;
     hadc1.Init.DMAContinuousRequests = ENABLE;
-    hadc1.Init.EOCSelection          = ADC_EOC_SINGLE_CONV;
+    hadc1.Init.EOCSelection          = ADC_EOC_SEQ_CONV;
     if (HAL_ADC_Init(&hadc1) != HAL_OK) {
         Error_Handler();
     }
@@ -424,6 +372,11 @@ MX_ADC1_Init(void) {
     sConfig.Channel      = ADC_CHANNEL_0;
     sConfig.Rank         = 1;
     sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES;//ADC_SAMPLETIME_3CYCLES;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_1;
+    sConfig.Rank         = 2;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
         Error_Handler();
     }
@@ -641,6 +594,10 @@ MX_GPIO_Init(void) {
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
+    /* EXTI interrupt init */
+    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
     GPIO_InitStruct.Pin   = LD2_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_NOPULL;
@@ -653,13 +610,21 @@ void
 Error_Handler(void) {
     __disable_irq();
     while (1) {
-        for(int i=0; i<1; i++) {
+        for(int i=0; i<10; i++) {
             HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-            HAL_Delay(200);
+            for(int x=0; x<200; x++) {
+                for(int j=0; j<15000; j++) {
+                    asm __volatile__ ("nop");
+                }
+            }
         }
-        for(int i=0; i<1; i++) {
+        for(int i=0; i<10; i++) {
             HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-            HAL_Delay(600);
+            for(int x=0; x<600; x++) {
+                for(int j=0; j<15000; j++) {
+                    asm __volatile__ ("nop");
+                }
+            }
         }
     }
 }
@@ -688,7 +653,7 @@ HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hAdc) {
 void
 HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hAdc) {
     if(hAdc == &hadc1) {
-        //HAL_TIM_Base_Stop(&htim2); // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        // HAL_TIM_Base_Stop(&htim2);
         adc1FullReady = true;
     }
     else if(hAdc == &hadc2) {
@@ -696,3 +661,9 @@ HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hAdc) {
     }
 }
 
+
+/// Blue Push Button callback
+void 
+HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    pbPressed = true;
+}
