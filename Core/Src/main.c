@@ -23,7 +23,6 @@ TIM_HandleTypeDef  htim3;
 
 UART_HandleTypeDef huart2;
 
-void SystemClock_Config(void);
 void SystemClockHSE_Config(void) ;
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
@@ -37,6 +36,7 @@ static void buildRamp(uint16_t min, uint16_t max);
 static void handlePotVals(int np, uint16_t* trimVal);
 static void startAcquisition();
 static void stopAcquisition();
+static void execCommand();
 
 //#define DEBUG        // Define this if debugging with a LED connected to DAC Out
 #define HSE_BYPASS
@@ -55,8 +55,12 @@ typedef uint8_t bool;
 #define NS 4096
 uint16_t Ramp[NS];      // Output Ramp
 uint16_t adc1Val[4*NS]; // Space for two Ramps (double buffer)
-uint16_t txBuff[NS];
-uint32_t avg[NS];
+uint32_t sensBuff[NS];
+uint32_t rampBuff[NS];
+uint32_t nAvgSens;
+uint32_t maxAvgSens = (0xFFFFFFFF >> 12)-2;
+uint32_t avgSens[NS];
+uint32_t avgRamp[NS];
 
 #define AVERNUM RAMP_FREQUENCY
 uint16_t nAvg;
@@ -72,8 +76,11 @@ __IO bool adc1FullReady = false;
 __IO bool adc2HalfReady = false;
 __IO bool adc2FullReady = false;
 __IO bool pbPressed     = false;
+__IO bool bUartReady    = false;
 
-char outBuff[80];
+
+uint8_t outBuff[80];
+uint8_t rxBuffer[1];
 
 
 void
@@ -101,14 +108,18 @@ handlePotVals(int np, uint16_t* trimVal) {
         rampMin = min;
         rampMax = max;
         buildRamp(rampMin, rampMax);
-        // sprintf(outBuff, "Ramp Min=%d Ramp Max=%d\n\r", rampMin, rampMax);
-        // HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen(outBuff), 10);
+        sprintf((char*)outBuff, "Ramp Min=%d Ramp Max=%d\n\r", rampMin, rampMax);
+        HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
     }
 }
 
 
 void
 startAcquisition() {
+    nAvgSens = 0;
+    memset(avgSens, 0, sizeof(avgSens));
+    memset(avgRamp, 0, sizeof(avgRamp));
+
     if(HAL_DAC_Start_DMA(&hdac, DAC1_CHANNEL_1, (uint32_t*)Ramp, NS, DAC_ALIGN_12B_R))
         Error_Handler(); 
 
@@ -149,6 +160,30 @@ stopAcquisition() {
 }
 
 
+static void
+execCommand() {
+    if(rxBuffer[0] == 'S') {
+        stopAcquisition();
+        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+        for(int i=0; i<NS; i++) {
+            sprintf((char*)outBuff, "i=%d Ramp=%d Dac=%ld Sensor=%ld\n\r",
+                            i, Ramp[i], avgRamp[i]/nAvgSens, avgSens[i]/nAvgSens);
+            HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
+        }
+        startAcquisition();
+        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+        if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
+            Error_Handler();
+        }
+    }
+    else {
+        if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
+            Error_Handler();
+        }
+    }
+}
+
+
 int 
 main(void) {
     rampMin = 0;
@@ -158,11 +193,10 @@ main(void) {
     adc1FullReady=false;
     adc2HalfReady=false;
     adc2FullReady=false;
-    memset(avg, 0, sizeof(avg));
     nAvg = 0;
 
     HAL_Init();
-    // SystemClock_Config();
+
     SystemClockHSE_Config();
 
     MX_GPIO_Init();
@@ -177,19 +211,40 @@ main(void) {
 
     bool bNewData = false;
 
-    startAcquisition();
+    startAcquisition(); // It also set nAvgSens=0 and sets 
+                        // the vectors avgSens[] and avgRamp[] to zero;
+    bUartReady = false;
+    if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
+        Error_Handler();
+    }
 
     while (1) {
         if(adc1HalfReady) {
             adc1HalfReady = false;
             HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
-            memcpy(txBuff, adc1Val, 2*NS*sizeof(*adc1Val));
+            for(int i=0; i<NS; i++) {
+                avgRamp[i] += adc1Val[2*i];
+                avgSens[i] += adc1Val[2*i+1];
+            }
+            nAvgSens++;
+            if(nAvgSens > maxAvgSens) {
+                stopAcquisition();
+                pbPressed = true;
+            }
             bNewData = true;
         }
         if(adc1FullReady) {
             adc1FullReady = false;
             HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
-            memcpy(txBuff, &adc1Val[2*NS], 2*NS*sizeof(*adc1Val));
+            for(int i=0; i<NS; i++) {
+                avgRamp[i] += adc1Val[2*NS+2*i];
+                avgSens[i] += adc1Val[2*NS+2*i+1];
+            }
+            nAvgSens++;
+            if(nAvgSens > maxAvgSens) {
+                stopAcquisition();
+                pbPressed = true;
+            }
             bNewData = true;
         }
 
@@ -210,13 +265,30 @@ main(void) {
             stopAcquisition();
             HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
             for(int i=0; i<NS; i++) {
-                sprintf(outBuff, "Dac=%d Adc0=%d Adc1=%d\n\r", Ramp[i], adc1Val[2*i], adc1Val[2*i+1]);
-                HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen(outBuff), 10);
+                sprintf((char*)outBuff, "i=%d Ramp=%d Dac=%ld Sensor=%ld\n\r",
+                                  i, Ramp[i], avgRamp[i]/nAvgSens, avgSens[i]/nAvgSens);
+                HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
             }
             pbPressed = false;
             startAcquisition();
             HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
         }
+        if(bUartReady) {
+            bUartReady = false;
+            execCommand();
+        }
+/*
+    if(HAL_UART_Transmit_IT(&huart2, (uint8_t*)aTxBuffer, TXBUFFERSIZE)!= HAL_OK) {
+        Error_Handler();
+    }
+    while (bUartReady) {
+    }
+    bUartReady = false;
+    if(HAL_UART_Receive_IT(&huart2, (uint8_t *)aRxBuffer, RXBUFFERSIZE) != HAL_OK) {
+        Error_Handler();
+    }
+*/
+        
 /*        
         else {
             if(bNewData) {
@@ -667,3 +739,45 @@ void
 HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     pbPressed = true;
 }
+
+
+/**
+  * @brief  Tx Transfer completed callback
+  * @param  UartHandle: UART handle. 
+  * @note   This example shows a simple way to report end of IT Tx transfer, and 
+  *         you can add your own implementation. 
+  * @retval None
+  */
+void
+HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle) {
+    /* Set transmission flag: transfer complete*/
+    bUartReady = true;
+}
+
+
+/**
+  * @brief  Rx Transfer completed callback
+  * @param  UartHandle: UART handle
+  * @note   This example shows a simple way to report end of IT Rx transfer, and 
+  *         you can add your own implementation.
+  * @retval None
+  */
+void
+HAL_UART_RxCpltCallback(UART_HandleTypeDef* UartHandle) {
+  /* Set transmission flag: transfer complete*/
+  bUartReady = true;
+}
+
+
+/**
+  * @brief  UART error callbacks
+  * @param  UartHandle: UART handle
+  * @note   This example shows a simple way to report transfer error, and you can
+  *         add your own implementation.
+  * @retval None
+  */
+void 
+HAL_UART_ErrorCallback(UART_HandleTypeDef* UartHandle) {
+    Error_Handler();
+}
+
