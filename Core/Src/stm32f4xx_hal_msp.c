@@ -189,10 +189,10 @@ HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc) {
     /* Peripheral clock disable */
     __HAL_RCC_ADC2_CLK_DISABLE();
       /**ADC2 GPIO Configuration
-      PC4     ------> ADC2_IN14
-      PC5     ------> ADC2_IN15
+      PC0     ------> ADC2_IN10
+      PC1     ------> ADC2_IN11
       */
-    HAL_GPIO_DeInit(GPIOC, GPIO_PIN_4|GPIO_PIN_5);
+    HAL_GPIO_DeInit(GPIOC, GPIO_PIN_0|GPIO_PIN_1);
 
     /* ADC2 interrupt DeInit */
     HAL_NVIC_DisableIRQ(ADC_IRQn);
@@ -327,25 +327,25 @@ HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base) {
 void 
 HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base) {
   if(htim_base->Instance==TIM2) {
-  /* USER CODE BEGIN TIM2_MspDeInit 0 */
-  /* USER CODE END TIM2_MspDeInit 0 */
+    /* USER CODE BEGIN TIM2_MspDeInit 0 */
+    /* USER CODE END TIM2_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_TIM2_CLK_DISABLE();
 
     /* TIM2 interrupt DeInit */
     HAL_NVIC_DisableIRQ(TIM2_IRQn);
-  /* USER CODE BEGIN TIM2_MspDeInit 1 */
-  /* USER CODE END TIM2_MspDeInit 1 */
+    /* USER CODE BEGIN TIM2_MspDeInit 1 */
+    /* USER CODE END TIM2_MspDeInit 1 */
   }
   if(htim_base->Instance==TIM3) {
-  /* USER CODE BEGIN TIM3_MspDeInit 0 */
-  /* USER CODE END TIM3_MspDeInit 0 */
+    /* USER CODE BEGIN TIM3_MspDeInit 0 */
+    /* USER CODE END TIM3_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_TIM3_CLK_DISABLE();
     /* TIM3 interrupt DeInit */
     HAL_NVIC_DisableIRQ(TIM3_IRQn);
-  /* USER CODE BEGIN TIM3_MspDeInit 1 */
-  /* USER CODE END TIM3_MspDeInit 1 */
+    /* USER CODE BEGIN TIM3_MspDeInit 1 */
+    /* USER CODE END TIM3_MspDeInit 1 */
   }
 
 }

@@ -1,8 +1,21 @@
 #include "main.h"
 #include <string.h>
 #include <stdio.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 
+// Used Pins:
+// ===========================================
+// PA0  ADC1_IN0 Analog Input Values
+// PA1  ADC1_IN1 Analog Input Values
+// PA2  USART2_TX
+// PA3  USART2_RX
+// PA5  DAC_OUT2 Ramp Generator
+// PC0  ADC2_IN10 Ramp Min Value Selection
+// PC1  ADC2_IN11 Ramp Max Value Selection
+// PC13 Blue Push Button
+
+
+// =========================================================
 // DAC  Out2 ==> PA5 Ramp Generator
 // ADC1 In0  ==> PA0 Analog Input Values
 // ADC1 In1  ==> PA1 Analog Input Values
