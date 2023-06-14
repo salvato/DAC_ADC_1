@@ -61,15 +61,15 @@ void Error_Handler(void);
 #define hadc2 hadc2
 #define htim2 htim2
 #define htim3 htim3
-#define hdac1 hdac
+#define hdac2 hdac
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
 #define USART_TX_Pin GPIO_PIN_2
 #define USART_TX_GPIO_Port GPIOA
 #define USART_RX_Pin GPIO_PIN_3
 #define USART_RX_GPIO_Port GPIOA
-#define LD2_Pin GPIO_PIN_5
-#define LD2_GPIO_Port GPIOA
+// #define LD2_Pin GPIO_PIN_5  // In conflitto con DAC Out2
+// #define LD2_GPIO_Port GPIOA // In conflitto con DAC Out2
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
