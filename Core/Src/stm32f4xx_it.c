@@ -14,7 +14,7 @@
   * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
-  */
+*/
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -59,7 +59,7 @@ extern DMA_HandleTypeDef  hdma_adc1;
 extern DMA_HandleTypeDef  hdma_adc2;
 extern ADC_HandleTypeDef  hadc1;
 extern ADC_HandleTypeDef  hadc2;
-extern DMA_HandleTypeDef  hdma_dac2;
+extern DMA_HandleTypeDef  hdma_dac;
 extern DAC_HandleTypeDef  hdac;
 extern TIM_HandleTypeDef  htim2;
 extern TIM_HandleTypeDef  htim3;
@@ -251,13 +251,26 @@ TIM6_DAC_IRQHandler(void) {
 
 
 /**
-  * @brief This function handles DMA Channel2 global interrupt.
+  * @brief This function handles DMA DAC Channel2 global interrupt.
+  */
+void 
+DMA1_Stream5_IRQHandler(void) {
+    /* USER CODE BEGIN DMA1_Stream5_IRQn 0 */
+    /* USER CODE END DMA1_Stream5_IRQn 0 */
+    HAL_DMA_IRQHandler(&hdma_dac);
+    /* USER CODE BEGIN DMA1_Stream5_IRQn 1 */
+    /* USER CODE END DMA1_Stream5_IRQn 1 */
+}
+
+
+/**
+  * @brief This function handles DMA DAC Channel2 global interrupt.
   */
 void 
 DMA1_Stream6_IRQHandler(void) {
     /* USER CODE BEGIN DMA1_Stream5_IRQn 0 */
     /* USER CODE END DMA1_Stream6_IRQn 0 */
-    HAL_DMA_IRQHandler(&hdma_dac2);
+    HAL_DMA_IRQHandler(&hdma_dac);
     /* USER CODE BEGIN DMA1_Stream6_IRQn 1 */
     /* USER CODE END DMA1_Stream6_IRQn 1 */
 }
@@ -268,11 +281,11 @@ DMA1_Stream6_IRQHandler(void) {
   */
 void 
 DMA2_Stream0_IRQHandler(void) {
-  /* USER CODE BEGIN DMA2_Stream0_IRQn 0 */
-  /* USER CODE END DMA2_Stream0_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_adc1);
-  /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
-  /* USER CODE END DMA2_Stream0_IRQn 1 */
+    /* USER CODE BEGIN DMA2_Stream0_IRQn 0 */
+    /* USER CODE END DMA2_Stream0_IRQn 0 */
+    HAL_DMA_IRQHandler(&hdma_adc1);
+    /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
+    /* USER CODE END DMA2_Stream0_IRQn 1 */
 }
 
 
@@ -281,11 +294,11 @@ DMA2_Stream0_IRQHandler(void) {
   */
 void 
 DMA2_Stream2_IRQHandler(void) {
-  /* USER CODE BEGIN DMA2_Stream0_IRQn 0 */
-  /* USER CODE END DMA2_Stream0_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_adc2);
-  /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
-  /* USER CODE END DMA2_Stream0_IRQn 1 */
+    /* USER CODE BEGIN DMA2_Stream0_IRQn 0 */
+    /* USER CODE END DMA2_Stream0_IRQn 0 */
+    HAL_DMA_IRQHandler(&hdma_adc2);
+    /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
+    /* USER CODE END DMA2_Stream0_IRQn 1 */
 }
 
 
@@ -294,11 +307,11 @@ DMA2_Stream2_IRQHandler(void) {
   */
 void 
 EXTI15_10_IRQHandler(void) {
-  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
-  /* USER CODE END EXTI15_10_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(B1_Pin);
-  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
-  /* USER CODE END EXTI15_10_IRQn 1 */
+    /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+    /* USER CODE END EXTI15_10_IRQn 0 */
+    HAL_GPIO_EXTI_IRQHandler(B1_Pin);
+    /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+    /* USER CODE END EXTI15_10_IRQn 1 */
 }
 
 

@@ -32,7 +32,7 @@
 //==========================================================//
 
 DAC_HandleTypeDef  hdac;
-DMA_HandleTypeDef  hdma_dac2;
+DMA_HandleTypeDef  hdma_dac;
 
 ADC_HandleTypeDef  hadc1;
 DMA_HandleTypeDef  hdma_adc1;
@@ -46,7 +46,7 @@ TIM_HandleTypeDef  htim3;
 UART_HandleTypeDef huart2;
 
 
-void SystemClockHSE_Config(void) ;
+static void SystemClockHSE_Config(void) ;
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
@@ -60,8 +60,12 @@ static void handlePotVals(int np, uint16_t* trimVal);
 static void startAcquisition();
 static void stopAcquisition();
 static void execCommand();
+static void transmitData();
+static void transmitAscii();
 
 //#define DEBUG        // Define this if debugging with a LED connected to DAC Out
+
+#define BAUD_RATE 115200//921600 //115200 //9600 //115200 //230400 //921600
 
 #define HSE_BYPASS
 #define DAC_BUFFERED
@@ -92,8 +96,8 @@ uint16_t nAvg;
 #define ADC_RAMP_BUFFER_LENGTH 16
 uint16_t adc2Val[2*ADC_RAMP_BUFFER_LENGTH];
 
-uint16_t rampMin = 0;
-uint16_t rampMax = 4095;
+uint16_t rampMin = 3000;
+uint16_t rampMax = 3500;
 
 __IO bool adc1HalfReady = false;
 __IO bool adc1FullReady = false;
@@ -112,12 +116,20 @@ buildRamp(uint16_t min, uint16_t max) {
     float factor = (float)(max-min)/(float)NS;
     for(int16_t i=0; i<NS; i++) {
         Ramp[i] = (uint16_t)(min+factor*i);
+        //Ramp[i] = (uint16_t)(max-factor*i);
     }
+    // for(int16_t i=0; i<NS/2; i++) {
+    //     Ramp[i] = 0;
+    // }
+    // for(int16_t i=NS/2; i<NS; i++) {
+    //     Ramp[i] = 4095;
+    // }
 }
 
 
 void
 handlePotVals(int np, uint16_t* trimVal) {
+    return;
     uint32_t min = 0;
     uint32_t max = 0;
     for(int i=0; i<np; i+=2) {
@@ -128,14 +140,38 @@ handlePotVals(int np, uint16_t* trimVal) {
     max /= np/2;
     min = min >> 3;        // Max RampMin = 511
     max = 3584+(max >> 3); // Min RampMax = 4095-511
-    if((abs(min-rampMin) > 1) || (abs(max-rampMax) > 1)) {
+    if((abs(min-rampMin) > 2) || (abs(max-rampMax) > 2)) {
         rampMin = min;
         rampMax = max;
         buildRamp(rampMin, rampMax);
-        sprintf((char*)outBuff, "Ramp Min=%d Ramp Max=%d\n\r", rampMin, rampMax);
-        HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
+        // sprintf((char*)outBuff, "Ramp Min=%d Ramp Max=%d\n\r", rampMin, rampMax);
+        // HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
     }
 }
+
+
+void
+transmitData() {
+    uint32_t nBytes = sizeof(avgRamp);
+    for(int i=0; i<NS; i++) {
+        avgRamp[i] /= nAvgSens;
+        avgSens[i] /= nAvgSens;
+    }
+    // HAL_UART_Transmit(&huart2, (uint8_t*)&nBytes, sizeof(uint32_t), 10);
+    HAL_UART_Transmit(&huart2, (uint8_t*)avgRamp, nBytes, 3000);  
+    // HAL_UART_Transmit(&huart2, (uint8_t*)&nBytes, sizeof(uint32_t), 10);
+    HAL_UART_Transmit(&huart2, (uint8_t*)avgSens, nBytes, 3000);
+}
+
+
+void
+transmitAscii() {
+    for(int i=0; i<NS; i++) {
+        sprintf((char*)outBuff, "i=%d Ramp=%d Dac=%ld Sensor=%ld\n\r",
+                        i, Ramp[i], avgRamp[i]/nAvgSens, avgSens[i]/nAvgSens);
+        HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
+     }
+ }
 
 
 void
@@ -144,7 +180,7 @@ startAcquisition() {
     memset(avgSens, 0, sizeof(avgSens));
     memset(avgRamp, 0, sizeof(avgRamp));
 
-    if(HAL_DAC_Start_DMA(&hdac, DAC1_CHANNEL_2, (uint32_t*)Ramp, NS, DAC_ALIGN_12B_R))
+    if(HAL_DAC_Start_DMA(&hdac, DAC1_CHANNEL, (uint32_t*)Ramp, NS, DAC_ALIGN_12B_R))
         Error_Handler(); 
 
     if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc1Val, 4*NS))
@@ -175,7 +211,7 @@ stopAcquisition() {
         Error_Handler();
     if(HAL_TIM_Base_Stop(&htim3))
         Error_Handler();
-    if(HAL_DAC_Stop_DMA(&hdac, DAC1_CHANNEL_2))
+    if(HAL_DAC_Stop_DMA(&hdac, DAC1_CHANNEL))
         Error_Handler(); 
     if(HAL_ADC_Stop_DMA(&hadc1))
         Error_Handler(); 
@@ -189,23 +225,19 @@ execCommand() {
     if(rxBuffer[0] == 'S') {
         stopAcquisition();
         // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-        for(int i=0; i<NS; i++) {
-            sprintf((char*)outBuff, "i=%d Ramp=%d Dac=%ld Sensor=%ld\n\r",
-                            i, Ramp[i], avgRamp[i]/nAvgSens, avgSens[i]/nAvgSens);
-            HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
-        }
+        transmitData();
         startAcquisition();
         // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
     } // Command "S"
     else if(rxBuffer[0] == 'R') {
         stopAcquisition();
-        sprintf((char*)outBuff, "Reset Done !\n\r");
-        HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
         startAcquisition();
     } // Command "R"
-    if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
-        Error_Handler();
-    }
+    else if(rxBuffer[0] == 'A') {
+        stopAcquisition();
+        transmitAscii();
+        startAcquisition();
+    } // Command "A"
 }
 
 
@@ -223,18 +255,19 @@ main(void) {
     HAL_Init();
 
     SystemClockHSE_Config();
-    HAL_Delay(1000);
+    HAL_Delay(3000);
     
     MX_GPIO_Init();
     // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
     MX_DMA_Init();
     MX_ADC1_Init();
     MX_ADC2_Init();
-    MX_USART2_UART_Init();
     MX_DAC_Init();
     MX_TIM2_Init();
     MX_TIM3_Init();
+    MX_USART2_UART_Init();
 
+    while(HAL_UART_GetState(&huart2) != HAL_UART_STATE_READY);
     bool bNewData = false;
 
     startAcquisition(); // It also set nAvgSens=0 and sets 
@@ -290,11 +323,9 @@ main(void) {
         if(pbPressed) {
             stopAcquisition();
             // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-            for(int i=0; i<NS; i++) {
-                sprintf((char*)outBuff, "i=%d Ramp=%d Dac=%ld Sensor=%ld\n\r",
-                                  i, Ramp[i], avgRamp[i]/nAvgSens, avgSens[i]/nAvgSens);
-                HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
-            }
+            // uint32_t ticks = HAL_GetTick();
+            transmitData();
+            // ticks = HAL_GetTick() - ticks;
             pbPressed = false;
             startAcquisition();
             // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
@@ -302,6 +333,9 @@ main(void) {
         if(bUartReady) {
             bUartReady = false;
             execCommand();
+            if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
+                Error_Handler();
+            }
         }
     } // while(true)
 }
@@ -481,9 +515,15 @@ MX_DAC_Init(void) {
     #else
         sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_DISABLE;
     #endif
-    if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_2) != HAL_OK) {
-        Error_Handler();
-    }
+    #ifdef DAC_CHAN1
+        if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_1) != HAL_OK) {
+            Error_Handler();
+        }
+    #else
+        if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_2) != HAL_OK) {
+            Error_Handler();
+        }
+    #endif
 }
 
 
@@ -609,10 +649,15 @@ static void
 MX_DMA_Init(void) {
     __HAL_RCC_DMA1_CLK_ENABLE(); // Used by DAC & UART2
     __HAL_RCC_DMA2_CLK_ENABLE(); // Used by ADC1 & ADC2
-
-    /* DMA1_Stream6_IRQn interrupt configuration (DAC) */
-    HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
+    #ifdef DAC_CHAN1
+        /* DMA1_Stream5_IRQn interrupt configuration (DAC) */
+        HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
+        HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+    #else
+        /* DMA1_Stream6_IRQn interrupt configuration (DAC) */
+        HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
+        HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
+    #endif
 
     /* DMA2_Stream0_IRQn interrupt configuration (ADC1) */
     HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
@@ -628,12 +673,19 @@ static void
 MX_GPIO_Init(void) {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOH_CLK_ENABLE();
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOH_CLK_ENABLE();
 
-    // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+    #ifdef DAC_CHAN1
+        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+        GPIO_InitStruct.Pin   = LD2_Pin;
+        GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStruct.Pull  = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+        HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+    #endif
 
     GPIO_InitStruct.Pin  = B1_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
@@ -644,11 +696,6 @@ MX_GPIO_Init(void) {
     HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
-    // GPIO_InitStruct.Pin   = LD2_Pin;
-    // GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
-    // GPIO_InitStruct.Pull  = GPIO_NOPULL;
-    // GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    // HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 }
 
 
@@ -657,7 +704,9 @@ Error_Handler(void) {
     __disable_irq();
     while (1) {
         for(int i=0; i<10; i++) {
-            // HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+            #ifdef DAC_CHAN1
+                 HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+            #endif
             for(int x=0; x<200; x++) {
                 for(int j=0; j<15000; j++) {
                     asm __volatile__ ("nop");
@@ -665,7 +714,9 @@ Error_Handler(void) {
             }
         }
         for(int i=0; i<10; i++) {
-            // HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+            #ifdef DAC_CHAN1
+                 HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+            #endif
             for(int x=0; x<600; x++) {
                 for(int j=0; j<15000; j++) {
                     asm __volatile__ ("nop");

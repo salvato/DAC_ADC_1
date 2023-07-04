@@ -55,6 +55,7 @@ void SVC_Handler(void);
 void DebugMon_Handler(void);
 void PendSV_Handler(void);
 void SysTick_Handler(void);
+void DMA1_Stream5_IRQHandler(void); // DAC Out1 DMA Handler
 void DMA1_Stream6_IRQHandler(void); // DAC Out2 DMA Handler
 void DMA2_Stream0_IRQHandler(void); // ADC1 DMA Handler
 void DMA2_Stream2_IRQHandler(void); // ADC2 DMA Handler
@@ -63,8 +64,6 @@ void TIM2_IRQHandler(void);
 void TIM3_IRQHandler(void);
 void TIM6_DAC_IRQHandler(void);
 void EXTI15_10_IRQHandler(void);
-void DMA1_Stream5_IRQHandler(void);
-void DMA1_Stream6_IRQHandler(void);
 void USART2_IRQHandler(void);
 
 /* USER CODE BEGIN EFP */
