@@ -23,7 +23,7 @@
 // ADC2_In11 ==> PC1 Ramp Max Value Selection
 // LD2 Disabled because Conflicting with DAC Out2 <<=======
 //==========================================================//
-// ATTENTIONE:                                              //
+// ATTENZIONE:                                              //
 // L'uscita 2 del DAC è connessa a PA5 che è FISICAMENTE    //
 // connesso alla serie R31 (510 OHM) --> LD2. a meno di non //
 // Interrompere il "soldering Bridge" SB21 (0 Ohm)          //
@@ -68,7 +68,7 @@ static void transmitAscii();
 #define BAUD_RATE 115200//921600 //115200 //9600 //115200 //230400 //921600
 
 #define HSE_BYPASS
-#define DAC_BUFFERED
+//#define DAC_BUFFERED
 #define TRIM_SAMPLING_FREQUENCY 10
 #ifdef DEBUG
     #define RAMP_FREQUENCY 1 // Hz
@@ -116,14 +116,8 @@ buildRamp(uint16_t min, uint16_t max) {
     float factor = (float)(max-min)/(float)NS;
     for(int16_t i=0; i<NS; i++) {
         Ramp[i] = (uint16_t)(min+factor*i);
-        //Ramp[i] = (uint16_t)(max-factor*i);
+        //Ramp[i] = (uint16_t)(max-factor*i); // Rampa inversa...
     }
-    // for(int16_t i=0; i<NS/2; i++) {
-    //     Ramp[i] = 0;
-    // }
-    // for(int16_t i=NS/2; i<NS; i++) {
-    //     Ramp[i] = 4095;
-    // }
 }
 
 
@@ -231,6 +225,7 @@ execCommand() {
     } // Command "S"
     else if(rxBuffer[0] == 'R') {
         stopAcquisition();
+        buildRamp(rampMin, rampMax);
         startAcquisition();
     } // Command "R"
     else if(rxBuffer[0] == 'A') {
@@ -238,6 +233,16 @@ execCommand() {
         transmitAscii();
         startAcquisition();
     } // Command "A"
+    else if(rxBuffer[0] == 'M') {
+        stopAcquisition();
+        buildRamp(rampMax, rampMax);
+        startAcquisition();
+    } // Command "M"
+    else if(rxBuffer[0] == 'm') {
+        stopAcquisition();
+        buildRamp(rampMin, rampMin);
+        startAcquisition();
+    } // Command "m"
 }
 
 
@@ -280,7 +285,9 @@ main(void) {
     while (1) {
         if(adc1HalfReady) {
             adc1HalfReady = false;
-            // HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
+            #ifdef DAC_CHAN1
+                HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
+            #endif
             for(int i=0; i<NS; i++) {
                 avgRamp[i] += adc1Val[2*i];
                 avgSens[i] += adc1Val[2*i+1];
@@ -294,7 +301,9 @@ main(void) {
         }
         if(adc1FullReady) {
             adc1FullReady = false;
-            // HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
+            #ifdef DAC_CHAN1
+                HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
+            #endif
             for(int i=0; i<NS; i++) {
                 avgRamp[i] += adc1Val[2*NS+2*i];
                 avgSens[i] += adc1Val[2*NS+2*i+1];
