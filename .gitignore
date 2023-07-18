@@ -5,3 +5,5 @@
 *.bin
 *.map
 
+diff.txt
+build/DAC_ADC_1.elf

@@ -5,20 +5,21 @@
 
 // Used Pins:
 // ===========================================
-// PA0  ADC1_IN0 Analog Input Values
-// PA1  ADC1_IN1 Analog Input Values
+// PA0  ADC1_IN0 Analog Input Values (Ramp)
+// PA1  ADC1_IN1 Analog Input Values (Sensor)
 // PA2  USART2_TX
 // PA3  USART2_RX
 // PA5  DAC_OUT2 Ramp Generator
 // PC0  ADC2_IN10 Ramp Min Value Selection
 // PC1  ADC2_IN11 Ramp Max Value Selection
 // PC13 Blue Push Button
+// ===========================================
 
 
 // =========================================================
 // DAC  Out2 ==> PA5 Ramp Generator
-// ADC1 In0  ==> PA0 Analog Input Values
-// ADC1 In1  ==> PA1 Analog Input Values
+// ADC1 In0  ==> PA0 Ramp Input Values
+// ADC1 In1  ==> PA1 Sensor Input Values
 // ADC2_In10 ==> PC0 Ramp Min Value Selection
 // ADC2_In11 ==> PC1 Ramp Max Value Selection
 // LD2 Disabled because Conflicting with DAC Out2 <<=======
@@ -96,8 +97,8 @@ uint16_t nAvg;
 #define ADC_RAMP_BUFFER_LENGTH 16
 uint16_t adc2Val[2*ADC_RAMP_BUFFER_LENGTH];
 
-uint16_t rampMin = 3000;
-uint16_t rampMax = 3500;
+uint16_t rampMin;
+uint16_t rampMax;
 
 __IO bool adc1HalfReady = false;
 __IO bool adc1FullReady = false;
@@ -282,7 +283,7 @@ main(void) {
         Error_Handler();
     }
 
-    while (1) {
+    while(true) {
         if(adc1HalfReady) {
             adc1HalfReady = false;
             #ifdef DAC_CHAN1
@@ -326,9 +327,11 @@ main(void) {
             // HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
             handlePotVals(ADC_RAMP_BUFFER_LENGTH, &adc2Val[ADC_RAMP_BUFFER_LENGTH]);
         }
+
         if(bNewData) {
             bNewData = false;
         }
+
         if(pbPressed) {
             stopAcquisition();
             // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
@@ -339,6 +342,7 @@ main(void) {
             startAcquisition();
             // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
         }
+
         if(bUartReady) {
             bUartReady = false;
             execCommand();
