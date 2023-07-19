@@ -251,7 +251,7 @@ int
 main(void) {
     rampMin = 0;
     rampMax = 4095;
-    buildRamp(rampMin, rampMax);
+    buildRamp(rampMin, rampMin);
     adc1HalfReady=false;
     adc1FullReady=false;
     adc2HalfReady=false;
@@ -261,7 +261,7 @@ main(void) {
     HAL_Init();
 
     SystemClockHSE_Config();
-    HAL_Delay(3000);
+//    HAL_Delay(3000);
     
     MX_GPIO_Init();
     // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
@@ -274,14 +274,14 @@ main(void) {
     MX_USART2_UART_Init();
 
     while(HAL_UART_GetState(&huart2) != HAL_UART_STATE_READY);
-    bool bNewData = false;
-
-    startAcquisition(); // It also set nAvgSens=0 and sets 
-                        // the vectors avgSens[] and avgRamp[] to zero;
     bUartReady = false;
     if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
         Error_Handler();
     }
+
+    bool bNewData = false;
+   startAcquisition(); // It also set nAvgSens=0 and sets 
+                       // the vectors avgSens[] and avgRamp[] to zero;
 
     while(true) {
         if(adc1HalfReady) {
