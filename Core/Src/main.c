@@ -280,8 +280,8 @@ main(void) {
     }
 
     bool bNewData = false;
-   startAcquisition(); // It also set nAvgSens=0 and sets 
-                       // the vectors avgSens[] and avgRamp[] to zero;
+    // startAcquisition(); // It also set nAvgSens=0 and sets 
+    //                     // the vectors avgSens[] and avgRamp[] to zero;
 
     while(true) {
         if(adc1HalfReady) {
