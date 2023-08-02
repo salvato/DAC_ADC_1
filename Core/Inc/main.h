@@ -71,8 +71,25 @@ void Error_Handler(void);
     #define DAC1_CHANNEL DAC1_CHANNEL_2
 #endif
 
+#define RampMinLed_Pin   GPIO_PIN_13
+#define RampMaxLed_Pin   GPIO_PIN_14
+#define RampStartLed_Pin GPIO_PIN_15
+
+#define RampMinPB_Pin   GPIO_PIN_4
+#define RampMaxPB_Pin   GPIO_PIN_5
+#define RampStartPB_Pin GPIO_PIN_6
+
+#define RampMinPB_GPIO_Port   GPIOB
+#define RampMaxPB_GPIO_Port   GPIOB
+#define RampStartPB_GPIO_Port GPIOB
+
+#define RampMinPB_EXTI_IRQn   EXTI4_IRQn
+#define RampMaxPB_EXTI_IRQn   EXTI9_5_IRQn
+#define RampStartPB_EXTI_IRQn EXTI9_5_IRQn
+
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
+
 #define USART_TX_Pin GPIO_PIN_2
 #define USART_TX_GPIO_Port GPIOA
 #define USART_RX_Pin GPIO_PIN_3

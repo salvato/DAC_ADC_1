@@ -9,7 +9,14 @@
 // PA1  ADC1_IN1 Analog Input Values (Sensor)
 // PA2  USART2_TX
 // PA3  USART2_RX
+// PA4  DAC_OUT1 Ramp Generator
 // PA5  DAC_OUT2 Ramp Generator
+// PB4  Ramp Min Push Button
+// PB5  Ramp Max Push Button
+// PB6  Start Ramp Push Button
+// PB13 Ramp Running Led Indicator
+// PB14 Ramp At Min Led Indicator
+// PB15 Ramp At Max Led Indicator
 // PC0  ADC2_IN10 Ramp Min Value Selection
 // PC1  ADC2_IN11 Ramp Max Value Selection
 // PC13 Blue Push Button
@@ -110,6 +117,7 @@ __IO bool bUartReady    = false;
 
 uint8_t outBuff[80];
 uint8_t rxBuffer[1];
+uint8_t command;
 
 
 void
@@ -217,32 +225,48 @@ stopAcquisition() {
 
 static void
 execCommand() {
-    if(rxBuffer[0] == 'S') {
+    if(command == 'S') {
         stopAcquisition();
-        // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
         transmitData();
+        buildRamp(rampMin, rampMax);
         startAcquisition();
-        // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_SET);
     } // Command "S"
-    else if(rxBuffer[0] == 'R') {
+    else if(command == 'R') {
         stopAcquisition();
         buildRamp(rampMin, rampMax);
         startAcquisition();
+        HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_SET);
     } // Command "R"
-    else if(rxBuffer[0] == 'A') {
+    else if(command == 'A') {
         stopAcquisition();
         transmitAscii();
+        buildRamp(rampMin, rampMax);
         startAcquisition();
+        HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_SET);
     } // Command "A"
-    else if(rxBuffer[0] == 'M') {
+    else if(command == 'M') {
         stopAcquisition();
         buildRamp(rampMax, rampMax);
         startAcquisition();
+        HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_RESET);
+
     } // Command "M"
-    else if(rxBuffer[0] == 'm') {
+    else if(command == 'm') {
         stopAcquisition();
         buildRamp(rampMin, rampMin);
         startAcquisition();
+        HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_RESET);
     } // Command "m"
 }
 
@@ -264,7 +288,6 @@ main(void) {
 //    HAL_Delay(3000);
     
     MX_GPIO_Init();
-    // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
     MX_DMA_Init();
     MX_ADC1_Init();
     MX_ADC2_Init();
@@ -333,18 +356,14 @@ main(void) {
         }
 
         if(pbPressed) {
-            stopAcquisition();
-            // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-            // uint32_t ticks = HAL_GetTick();
-            transmitData();
-            // ticks = HAL_GetTick() - ticks;
             pbPressed = false;
-            startAcquisition();
-            // HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+            command = 'S';
+            execCommand();
         }
 
         if(bUartReady) {
             bUartReady = false;
+            command = rxBuffer[0];
             execCommand();
             if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
                 Error_Handler();
@@ -700,15 +719,37 @@ MX_GPIO_Init(void) {
         HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
     #endif
 
+    // Led Indicators: RampMinLed_Pin, RampMaxLed_Pin, RampStartLed_Pin
+    GPIO_InitStruct.Pin   = RampMinLed_Pin | RampMaxLed_Pin | RampStartLed_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_RESET);
+
+    // Ramp Push Buttons: RampMinPB_Pin, RampMaxPB_Pin, RampStartPB_Pin
+    GPIO_InitStruct.Pin = RampMinPB_Pin | RampMaxPB_Pin | RampStartPB_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    // Blue Push Button
     GPIO_InitStruct.Pin  = B1_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-    /* EXTI interrupt init */
+    // EXTI interrupt init
+    HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+
+    HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
     HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-
 }
 
 
@@ -772,9 +813,17 @@ HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hAdc) {
 }
 
 
-/// Blue Push Button callback
-void 
+/// Push Buttons callback
+void
 HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if(GPIO_Pin == B1_Pin) // On Board Blue Push Button
+        command = 'S';
+    if(GPIO_Pin == RampMinPB_Pin)
+        command = 'm';
+    if(GPIO_Pin == RampMaxPB_Pin)
+        command = 'M';
+    if(GPIO_Pin == RampStartPB_Pin)
+        command = 'R';
     pbPressed = true;
 }
 
