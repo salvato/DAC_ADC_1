@@ -357,7 +357,6 @@ main(void) {
 
         if(pbPressed) {
             pbPressed = false;
-            command = 'S';
             execCommand();
         }
 
