@@ -275,7 +275,6 @@ int
 main(void) {
     rampMin = 0;
     rampMax = 4095;
-    buildRamp(rampMin, rampMin);
     adc1HalfReady=false;
     adc1FullReady=false;
     adc2HalfReady=false;
@@ -302,9 +301,13 @@ main(void) {
         Error_Handler();
     }
 
-    bool bNewData = false;
+    buildRamp(rampMin, rampMin);
+
     // startAcquisition(); // It also set nAvgSens=0 and sets 
     //                     // the vectors avgSens[] and avgRamp[] to zero;
+    // HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
+    // HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
+    // HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_SET);
 
     while(true) {
         if(adc1HalfReady) {
@@ -321,7 +324,6 @@ main(void) {
                 stopAcquisition();
                 pbPressed = true;
             }
-            bNewData = true;
         }
         if(adc1FullReady) {
             adc1FullReady = false;
@@ -337,7 +339,6 @@ main(void) {
                 stopAcquisition();
                 pbPressed = true;
             }
-            bNewData = true;
         }
 
         if(adc2HalfReady) {
@@ -350,11 +351,7 @@ main(void) {
             // HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
             handlePotVals(ADC_RAMP_BUFFER_LENGTH, &adc2Val[ADC_RAMP_BUFFER_LENGTH]);
         }
-
-        if(bNewData) {
-            bNewData = false;
-        }
-
+       
         if(pbPressed) {
             pbPressed = false;
             execCommand();
@@ -731,7 +728,7 @@ MX_GPIO_Init(void) {
     // Ramp Push Buttons: RampMinPB_Pin, RampMaxPB_Pin, RampStartPB_Pin
     GPIO_InitStruct.Pin = RampMinPB_Pin | RampMaxPB_Pin | RampStartPB_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     // Blue Push Button
