@@ -73,7 +73,7 @@ static void transmitAscii();
 
 //#define DEBUG        // Define this if debugging with a LED connected to DAC Out
 
-#define BAUD_RATE 115200//921600 //115200 //9600 //115200 //230400 //921600
+#define BAUD_RATE 115200 //921600 //115200 //9600 //115200 //230400 //921600
 
 #define HSE_BYPASS
 //#define DAC_BUFFERED
@@ -112,6 +112,7 @@ __IO bool adc1FullReady = false;
 __IO bool adc2HalfReady = false;
 __IO bool adc2FullReady = false;
 __IO bool pbPressed     = false;
+__IO bool bCharPresent  = false;
 __IO bool bUartReady    = false;
 
 
@@ -160,6 +161,7 @@ transmitData() {
         avgRamp[i] /= nAvgSens;
         avgSens[i] /= nAvgSens;
     }
+    // Sends an amount of data in blocking mode.
     // HAL_UART_Transmit(&huart2, (uint8_t*)&nBytes, sizeof(uint32_t), 10);
     HAL_UART_Transmit(&huart2, (uint8_t*)avgRamp, nBytes, 3000);  
     // HAL_UART_Transmit(&huart2, (uint8_t*)&nBytes, sizeof(uint32_t), 10);
@@ -172,9 +174,10 @@ transmitAscii() {
     for(int i=0; i<NS; i++) {
         sprintf((char*)outBuff, "i=%d Ramp=%d Dac=%ld Sensor=%ld\n\r",
                         i, Ramp[i], avgRamp[i]/nAvgSens, avgSens[i]/nAvgSens);
+        // Sends an amount of data in blocking mode.
         HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
      }
- }
+}
 
 
 void
@@ -296,7 +299,7 @@ main(void) {
     MX_USART2_UART_Init();
 
     while(HAL_UART_GetState(&huart2) != HAL_UART_STATE_READY);
-    bUartReady = false;
+    bCharPresent = false;
     if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
         Error_Handler();
     }
@@ -321,8 +324,8 @@ main(void) {
             }
             nAvgSens++;
             if(nAvgSens > maxAvgSens) {
-                stopAcquisition();
-                pbPressed = true;
+                command = 'S';
+                execCommand();
             }
         }
         if(adc1FullReady) {
@@ -336,8 +339,8 @@ main(void) {
             }
             nAvgSens++;
             if(nAvgSens > maxAvgSens) {
-                stopAcquisition();
-                pbPressed = true;
+                command = 'S';
+                execCommand();
             }
         }
 
@@ -357,8 +360,8 @@ main(void) {
             execCommand();
         }
 
-        if(bUartReady) {
-            bUartReady = false;
+        if(bCharPresent) {
+            bCharPresent = false;
             command = rxBuffer[0];
             execCommand();
             if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
@@ -660,7 +663,7 @@ MX_TIM3_Init(void) {
 static void 
 MX_USART2_UART_Init(void) {
     huart2.Instance = USART2;
-    huart2.Init.BaudRate     = 115200;
+    huart2.Init.BaudRate     = BAUD_RATE;
     huart2.Init.WordLength   = UART_WORDLENGTH_8B;
     huart2.Init.StopBits     = UART_STOPBITS_1;
     huart2.Init.Parity       = UART_PARITY_NONE;
@@ -814,12 +817,14 @@ void
 HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     if(GPIO_Pin == B1_Pin) // On Board Blue Push Button
         command = 'S';
-    if(GPIO_Pin == RampMinPB_Pin)
+    else if(GPIO_Pin == RampMinPB_Pin)
         command = 'm';
-    if(GPIO_Pin == RampMaxPB_Pin)
+    else if(GPIO_Pin == RampMaxPB_Pin)
         command = 'M';
-    if(GPIO_Pin == RampStartPB_Pin)
+    else if(GPIO_Pin == RampStartPB_Pin)
         command = 'R';
+    else
+        return;
     pbPressed = true;
 }
 
@@ -847,8 +852,7 @@ HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle) {
   */
 void
 HAL_UART_RxCpltCallback(UART_HandleTypeDef* UartHandle) {
-    /* Set transmission flag: transfer complete*/
-    bUartReady = true;
+    bCharPresent = true;
 }
 
 
