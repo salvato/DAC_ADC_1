@@ -171,11 +171,7 @@ execCommand() {
 
 int 
 main(void) {
-    rampMin = 0;
-    rampMax = 4095;
-
     HAL_Init();
-
     SystemClockHSE_Config();
 //    HAL_Delay(3000);
     
@@ -191,21 +187,16 @@ main(void) {
         Error_Handler();
     }
 
-    buildRamp(rampMin, rampMin);
-
-    // startAcquisition(); // It also set nAvgSens=0 and sets 
-    //                     // the vectors avgSens[] and avgRamp[] to zero;
-    // HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
-    // HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
-    // HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_SET);
+    rampMin = 0;
+    rampMax = 4095;
+    command = 'R';
+    execCommand();
 
     while(true) {
-       
         if(pbPressed) {
             pbPressed = false;
             execCommand();
         }
-
         if(bCharPresent) {
             bCharPresent = false;
             command = rxBuffer[0];
