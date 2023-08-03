@@ -42,14 +42,7 @@
 DAC_HandleTypeDef  hdac;
 DMA_HandleTypeDef  hdma_dac;
 
-ADC_HandleTypeDef  hadc1;
-DMA_HandleTypeDef  hdma_adc1;
-
-ADC_HandleTypeDef  hadc2;
-DMA_HandleTypeDef  hdma_adc2;
-
 TIM_HandleTypeDef  htim2;
-TIM_HandleTypeDef  htim3;
 
 UART_HandleTypeDef huart2;
 
@@ -57,19 +50,13 @@ UART_HandleTypeDef huart2;
 static void SystemClockHSE_Config(void) ;
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
-static void MX_ADC1_Init(void);
-static void MX_ADC2_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_DAC_Init(void);
 static void MX_TIM2_Init(void);
-static void MX_TIM3_Init(void);
 static void buildRamp(uint16_t min, uint16_t max);
-static void handlePotVals(int np, uint16_t* trimVal);
 static void startAcquisition();
 static void stopAcquisition();
 static void execCommand();
-static void transmitData();
-static void transmitAscii();
 
 //#define DEBUG        // Define this if debugging with a LED connected to DAC Out
 
@@ -90,33 +77,15 @@ typedef uint8_t bool;
 
 #define NS 4096
 uint16_t Ramp[NS];      // Output Ramp
-uint16_t adc1Val[4*NS]; // Space for two Ramps (double buffer)
-uint32_t sensBuff[NS];
-uint32_t rampBuff[NS];
-uint32_t nAvgSens;
-uint32_t maxAvgSens = (0xFFFFFFFF >> 12)-2;
-uint32_t avgSens[NS];
-uint32_t avgRamp[NS];
-
-#define AVERNUM RAMP_FREQUENCY
-uint16_t nAvg;
-
-#define ADC_RAMP_BUFFER_LENGTH 16
-uint16_t adc2Val[2*ADC_RAMP_BUFFER_LENGTH];
 
 uint16_t rampMin;
 uint16_t rampMax;
 
-__IO bool adc1HalfReady = false;
-__IO bool adc1FullReady = false;
-__IO bool adc2HalfReady = false;
-__IO bool adc2FullReady = false;
 __IO bool pbPressed     = false;
 __IO bool bCharPresent  = false;
 __IO bool bUartReady    = false;
 
 
-uint8_t outBuff[80];
 uint8_t rxBuffer[1];
 uint8_t command;
 
@@ -132,81 +101,15 @@ buildRamp(uint16_t min, uint16_t max) {
 
 
 void
-handlePotVals(int np, uint16_t* trimVal) {
-    return;
-    uint32_t min = 0;
-    uint32_t max = 0;
-    for(int i=0; i<np; i+=2) {
-        min += trimVal[i];
-        max += trimVal[i+1];
-    }
-    min /= np/2;
-    max /= np/2;
-    min = min >> 3;        // Max RampMin = 511
-    max = 3584+(max >> 3); // Min RampMax = 4095-511
-    if((abs(min-rampMin) > 2) || (abs(max-rampMax) > 2)) {
-        rampMin = min;
-        rampMax = max;
-        buildRamp(rampMin, rampMax);
-        // sprintf((char*)outBuff, "Ramp Min=%d Ramp Max=%d\n\r", rampMin, rampMax);
-        // HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
-    }
-}
-
-
-void
-transmitData() {
-    uint32_t nBytes = sizeof(avgRamp);
-    for(int i=0; i<NS; i++) {
-        avgRamp[i] /= nAvgSens;
-        avgSens[i] /= nAvgSens;
-    }
-    // Sends an amount of data in blocking mode.
-    // HAL_UART_Transmit(&huart2, (uint8_t*)&nBytes, sizeof(uint32_t), 10);
-    HAL_UART_Transmit(&huart2, (uint8_t*)avgRamp, nBytes, 3000);  
-    // HAL_UART_Transmit(&huart2, (uint8_t*)&nBytes, sizeof(uint32_t), 10);
-    HAL_UART_Transmit(&huart2, (uint8_t*)avgSens, nBytes, 3000);
-}
-
-
-void
-transmitAscii() {
-    for(int i=0; i<NS; i++) {
-        sprintf((char*)outBuff, "i=%d Ramp=%d Dac=%ld Sensor=%ld\n\r",
-                        i, Ramp[i], avgRamp[i]/nAvgSens, avgSens[i]/nAvgSens);
-        // Sends an amount of data in blocking mode.
-        HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
-     }
-}
-
-
-void
 startAcquisition() {
-    nAvgSens = 0;
-    memset(avgSens, 0, sizeof(avgSens));
-    memset(avgRamp, 0, sizeof(avgRamp));
-
     if(HAL_DAC_Start_DMA(&hdac, DAC1_CHANNEL, (uint32_t*)Ramp, NS, DAC_ALIGN_12B_R))
-        Error_Handler(); 
-
-    if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc1Val, 4*NS))
-        Error_Handler(); 
-
-    if(HAL_ADC_Start_DMA(&hadc2, (uint32_t*)&adc2Val, 2*ADC_RAMP_BUFFER_LENGTH))
         Error_Handler(); 
 
     if(HAL_TIM_Base_Start(&htim2))
         Error_Handler();
-
-    if(HAL_TIM_Base_Start(&htim3))
-        Error_Handler();
     
     // start pwm generation (is This needed ?)
     // if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1))
-    //     Error_Handler();
-
-    // start pwm generation (is This needed ?)
-    // if(HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1))
     //     Error_Handler();
 }
 
@@ -215,13 +118,7 @@ void
 stopAcquisition() {
     if(HAL_TIM_Base_Stop(&htim2))
         Error_Handler();
-    if(HAL_TIM_Base_Stop(&htim3))
-        Error_Handler();
     if(HAL_DAC_Stop_DMA(&hdac, DAC1_CHANNEL))
-        Error_Handler(); 
-    if(HAL_ADC_Stop_DMA(&hadc1))
-        Error_Handler(); 
-    if(HAL_ADC_Stop_DMA(&hadc2))
         Error_Handler(); 
 }
 
@@ -230,7 +127,6 @@ static void
 execCommand() {
     if(command == 'S') {
         stopAcquisition();
-        transmitData();
         buildRamp(rampMin, rampMax);
         startAcquisition();
         HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
@@ -247,7 +143,6 @@ execCommand() {
     } // Command "R"
     else if(command == 'A') {
         stopAcquisition();
-        transmitAscii();
         buildRamp(rampMin, rampMax);
         startAcquisition();
         HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
@@ -278,11 +173,6 @@ int
 main(void) {
     rampMin = 0;
     rampMax = 4095;
-    adc1HalfReady=false;
-    adc1FullReady=false;
-    adc2HalfReady=false;
-    adc2FullReady=false;
-    nAvg = 0;
 
     HAL_Init();
 
@@ -291,11 +181,8 @@ main(void) {
     
     MX_GPIO_Init();
     MX_DMA_Init();
-    MX_ADC1_Init();
-    MX_ADC2_Init();
     MX_DAC_Init();
     MX_TIM2_Init();
-    MX_TIM3_Init();
     MX_USART2_UART_Init();
 
     while(HAL_UART_GetState(&huart2) != HAL_UART_STATE_READY);
@@ -313,47 +200,6 @@ main(void) {
     // HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_SET);
 
     while(true) {
-        if(adc1HalfReady) {
-            adc1HalfReady = false;
-            #ifdef DAC_CHAN1
-                HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
-            #endif
-            for(int i=0; i<NS; i++) {
-                avgRamp[i] += adc1Val[2*i];
-                avgSens[i] += adc1Val[2*i+1];
-            }
-            nAvgSens++;
-            if(nAvgSens > maxAvgSens) {
-                command = 'S';
-                execCommand();
-            }
-        }
-        if(adc1FullReady) {
-            adc1FullReady = false;
-            #ifdef DAC_CHAN1
-                HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
-            #endif
-            for(int i=0; i<NS; i++) {
-                avgRamp[i] += adc1Val[2*NS+2*i];
-                avgSens[i] += adc1Val[2*NS+2*i+1];
-            }
-            nAvgSens++;
-            if(nAvgSens > maxAvgSens) {
-                command = 'S';
-                execCommand();
-            }
-        }
-
-        if(adc2HalfReady) {
-            adc2HalfReady = false;
-            // HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
-            handlePotVals(ADC_RAMP_BUFFER_LENGTH, adc2Val);
-        }
-        if(adc2FullReady) {
-            adc2FullReady = false;
-            // HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
-            handlePotVals(ADC_RAMP_BUFFER_LENGTH, &adc2Val[ADC_RAMP_BUFFER_LENGTH]);
-        }
        
         if(pbPressed) {
             pbPressed = false;
@@ -460,80 +306,6 @@ SystemClockHSE_Config(void) {
 
 
 static void
-MX_ADC1_Init(void) {
-    ADC_ChannelConfTypeDef sConfig = {0};
-
-    hadc1.Instance = ADC1;
-    hadc1.Init.ClockPrescaler        = ADC_CLOCK_SYNC_PCLK_DIV4; // The clock is common for all the ADCs.
-    hadc1.Init.Resolution            = ADC_RESOLUTION_12B;
-    hadc1.Init.ScanConvMode          = ENABLE;
-    hadc1.Init.ContinuousConvMode    = DISABLE;
-    hadc1.Init.DiscontinuousConvMode = DISABLE;
-    hadc1.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_RISING;
-    hadc1.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T2_TRGO;
-    hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc1.Init.NbrOfConversion       = 2;
-    hadc1.Init.DMAContinuousRequests = ENABLE;
-    hadc1.Init.EOCSelection          = ADC_EOC_SEQ_CONV;
-    if (HAL_ADC_Init(&hadc1) != HAL_OK) {
-        Error_Handler();
-    }
-    // The total conversion time is calculated as follows:
-    // Tconv = ADC_SAMPLETIME + 12 cycles
-    sConfig.Channel      = ADC_CHANNEL_0;
-    sConfig.Rank         = 1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES;//ADC_SAMPLETIME_3CYCLES;
-    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
-        Error_Handler();
-    }
-    sConfig.Channel      = ADC_CHANNEL_1;
-    sConfig.Rank         = 2;
-    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
-        Error_Handler();
-    }
-}
-
-
-/**
-  * @brief ADC2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void 
-MX_ADC2_Init(void) {
-    ADC_ChannelConfTypeDef sConfig = {0};
-
-    hadc2.Instance = ADC2;
-    hadc2.Init.ClockPrescaler        = ADC_CLOCK_SYNC_PCLK_DIV4; // The clock is common for all the ADCs.
-    hadc2.Init.Resolution            = ADC_RESOLUTION_12B;
-    hadc2.Init.ScanConvMode          = ENABLE; // In scan mode, automatic conversion is performed on a selected group of analog inputs.
-    hadc2.Init.ContinuousConvMode    = DISABLE;
-    hadc2.Init.DiscontinuousConvMode = DISABLE;
-    hadc2.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_RISING;
-    hadc2.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T3_TRGO;
-    hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc2.Init.NbrOfConversion       = 2;
-    hadc2.Init.DMAContinuousRequests = ENABLE;
-    hadc2.Init.EOCSelection          = ADC_EOC_SEQ_CONV;
-    if (HAL_ADC_Init(&hadc2) != HAL_OK) {
-        Error_Handler();
-    }
-
-    sConfig.Channel      = ADC_CHANNEL_10;
-    sConfig.Rank         = 1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES;
-    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK) {
-        Error_Handler();
-    }
-    sConfig.Channel      = ADC_CHANNEL_11;
-    sConfig.Rank         = 2;
-    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK) {
-        Error_Handler();
-    }
-}
-
-
-static void
 MX_DAC_Init(void) {
     DAC_ChannelConfTypeDef sConfig = {0};
     hdac.Instance = DAC1;
@@ -605,61 +377,6 @@ MX_TIM2_Init(void) {
 }
 
 
-/**
-  * @brief TIM3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void 
-MX_TIM3_Init(void) {
-    // Timer3 is a 16 bit timer
-    // Timer3 internal Clock is APB2 Clock ???
-    uint32_t clock = HAL_RCC_GetPCLK2Freq();
-    uint32_t prescalerValue = 4000;
-    uint32_t periodValue    = (uint32_t)((clock/(prescalerValue-1))/(TRIM_SAMPLING_FREQUENCY*ADC_RAMP_BUFFER_LENGTH));
-    if(periodValue < 2) {
-        Error_Handler();
-    }
-    periodValue -= 1;
-
-    TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-    TIM_MasterConfigTypeDef sMasterConfig     = {0};
-    TIM_OC_InitTypeDef sConfigOC              = {0};
-
-    /* USER CODE BEGIN TIM3_Init 1 */
-
-    /* USER CODE END TIM3_Init 1 */
-    htim3.Instance = TIM3;
-    htim3.Init.Prescaler         = prescalerValue;
-    htim3.Init.CounterMode       = TIM_COUNTERMODE_UP;
-    htim3.Init.Period            = periodValue;
-    htim3.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-    htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-    if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
-        Error_Handler();
-    }
-    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-    if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK) {
-        Error_Handler();
-    }
-    if (HAL_TIM_PWM_Init(&htim3) != HAL_OK) {
-        Error_Handler();
-    }
-    sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
-    sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
-    if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK) {
-        Error_Handler();
-    }
-    sConfigOC.OCMode     = TIM_OCMODE_PWM1;
-    sConfigOC.Pulse      = 0;
-    sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-    sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-    if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK) {
-        Error_Handler();
-    }
-}
-
-
 static void 
 MX_USART2_UART_Init(void) {
     huart2.Instance = USART2;
@@ -689,14 +406,6 @@ MX_DMA_Init(void) {
         HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
         HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
     #endif
-
-    /* DMA2_Stream0_IRQn interrupt configuration (ADC1) */
-    HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-
-    /* DMA2_Stream2_IRQn interrupt configuration (ADC2) */
-    HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
 }
 
 
@@ -785,31 +494,6 @@ void
 assert_failed(uint8_t *file, uint32_t line) {
 }
 #endif /* USE_FULL_ASSERT */
-
-
-/// ADC Conversion_Half_Complete callback
-void
-HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hAdc) {
-    if(hAdc == &hadc1) {
-        adc1HalfReady = true;
-    }
-    else if(hAdc == &hadc2) {
-        adc2HalfReady = true;
-    }
-}
-
-
-/// ADC Conversion_Complete callback
-void
-HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hAdc) {
-    if(hAdc == &hadc1) {
-        // HAL_TIM_Base_Stop(&htim2);
-        adc1FullReady = true;
-    }
-    else if(hAdc == &hadc2) {
-        adc2FullReady = true;
-    }
-}
 
 
 /// Push Buttons callback
