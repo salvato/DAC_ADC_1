@@ -14,7 +14,7 @@
                 "openocd.cfg"
             ],
             "svdFile": "STM32F446.svd",
-            "armToolchainPath": "/opt/gcc-arm-none-eabi/bin"
+            "armToolchainPath": "/opt/st/stm32cubeclt_1.19.0/GNU-tools-for-STM32/bin"
         },
         {
             "showDevDebugOutput": "parsed",

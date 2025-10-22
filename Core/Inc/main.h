@@ -62,7 +62,9 @@ void Error_Handler(void);
 #define htim2 htim2
 #define htim3 htim3
 
-#define DAC_CHAN1
+//#define DAC_CHAN1   // Define this if you want to use DAC Channel 1 (PA4)
+                    //  instead of Channel 2 (PA5)
+
 #ifdef DAC_CHAN1
     #define DAC1_CHANNEL DAC1_CHANNEL_1
     #define LD2_Pin GPIO_PIN_5  // In conflitto con DAC Out2

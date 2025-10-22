@@ -3,6 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
+// Modificato main.h per scegliere il canale DAC_CHAN2
+// Interrotto sulla Board SB21 per scollegare LD2 da PA5 (DAC_OUT2)
+
+
 // Used Pins:
 // ===========================================
 // PA0  ADC1_IN0 Analog Input Values (Ramp)
@@ -37,6 +42,9 @@
 // Interrompere il "soldering Bridge" SB21 (0 Ohm)          //
 // Questo comporta che il DAC è "caricato" e non riesce     //
 // ad erogare tutti i 3.3V che dovrebbe.                    //
+//                                                          //
+// La scelta tra DAC Out1 e DAC Out2 dipende dalla          //
+// definizione di DAC_CHAN1 in "main.h"                     // 
 //==========================================================//
 
 DAC_HandleTypeDef  hdac;
@@ -63,7 +71,13 @@ static void execCommand();
 #define BAUD_RATE 115200 //921600 //115200 //9600 //115200 //230400 //921600
 
 #define HSE_BYPASS
+
+// Using the DAC Buffer reduce the output impedance of the DAC output
+// but reduces the maximum output voltage swing.
+// If the DAC output is connected to a high impedance load (e.g. an ADC input)
+// the buffer can be disabled to have the full output voltage swing (0 - 3.3V)
 //#define DAC_BUFFERED
+
 #define TRIM_SAMPLING_FREQUENCY 10
 #ifdef DEBUG
     #define RAMP_FREQUENCY 1 // Hz
