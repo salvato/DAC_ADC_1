@@ -4,8 +4,11 @@
 #include <stdlib.h>
 
 
-// Modificato main.h per scegliere il canale DAC_CHAN2.
-// !!! Ho interrotto, sulla Board, SB21 in modo da scollegare LD2 da PA5 (DAC_OUT2) !!!
+// =======================================================
+// // Modificato main.h per scegliere il canale DAC_CHAN2.
+// !!! Ho interrotto, sulla Board, SB21 in modo da 
+//     scollegare LD2 da PA5 (DAC_OUT2) !!!
+// =======================================================
 
 
 // Used Pins:
@@ -67,7 +70,7 @@ static void startAcquisition();
 static void stopAcquisition();
 static void execCommand();
 
-#define DEBUG        // Define this if debugging with a LED connected to DAC Out
+//#define DEBUG        // Define this if debugging with a LED connected to DAC Out
 
 #define BAUD_RATE 115200 //921600 //115200 //9600 //115200 //230400 //921600
 
