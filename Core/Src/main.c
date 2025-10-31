@@ -4,8 +4,8 @@
 #include <stdlib.h>
 
 
-// Modificato main.h per scegliere il canale DAC_CHAN2
-// Interrotto sulla Board SB21 per scollegare LD2 da PA5 (DAC_OUT2)
+// Modificato main.h per scegliere il canale DAC_CHAN2.
+// !!! Ho interrotto, sulla Board, SB21 in modo da scollegare LD2 da PA5 (DAC_OUT2) !!!
 
 
 // Used Pins:
@@ -16,6 +16,7 @@
 // PA3  USART2_RX
 // PA4  DAC_OUT1 Ramp Generator
 // PA5  DAC_OUT2 Ramp Generator
+// PA10 Ramp Trigger Output (D2 sul connettore Arduino CN9)
 // PB4  Ramp Min Push Button
 // PB5  Ramp Max Push Button
 // PB6  Start Ramp Push Button
@@ -34,7 +35,7 @@
 // ADC1 In1  ==> PA1 Sensor Input Values
 // ADC2_In10 ==> PC0 Ramp Min Value Selection
 // ADC2_In11 ==> PC1 Ramp Max Value Selection
-// LD2 Disabled because Conflicting with DAC Out2 <<=======
+// LD2 Disabled since it conflicts with DAC Out2 <<=======
 //==========================================================//
 // ATTENZIONE:                                              //
 // L'uscita 2 del DAC è connessa a PA5 che è FISICAMENTE    //
@@ -66,7 +67,7 @@ static void startAcquisition();
 static void stopAcquisition();
 static void execCommand();
 
-//#define DEBUG        // Define this if debugging with a LED connected to DAC Out
+#define DEBUG        // Define this if debugging with a LED connected to DAC Out
 
 #define BAUD_RATE 115200 //921600 //115200 //9600 //115200 //230400 //921600
 
@@ -116,6 +117,7 @@ buildRamp(uint16_t min, uint16_t max) {
 
 void
 startAcquisition() {
+    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
     if(HAL_DAC_Start_DMA(&hdac, DAC1_CHANNEL, (uint32_t*)Ramp, NS, DAC_ALIGN_12B_R))
         Error_Handler(); 
 
@@ -130,6 +132,7 @@ startAcquisition() {
 
 void
 stopAcquisition() {
+    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
     if(HAL_TIM_Base_Stop(&htim2))
         Error_Handler();
     if(HAL_DAC_Stop_DMA(&hdac, DAC1_CHANNEL))
@@ -317,6 +320,11 @@ MX_DAC_Init(void) {
     if (HAL_DAC_Init(&hdac) != HAL_OK) {
         Error_Handler();
     }
+/*
+    Each time the DAC detects a rising edge on the selected timer TRGO output (T2_TRGO), 
+    the last data stored into the DAC_DHRx register are transferred into the DAC_DORx 
+    register.
+*/
     sConfig.DAC_Trigger          = DAC_TRIGGER_T2_TRGO;
     #ifdef DAC_BUFFERED
         sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
@@ -349,7 +357,6 @@ MX_TIM2_Init(void) {
 
     TIM_ClockConfigTypeDef sClockSourceConfig = {0};
     TIM_MasterConfigTypeDef sMasterConfig = {0};
-    TIM_OC_InitTypeDef sConfigOC = {0};
 
     htim2.Instance = TIM2;
     htim2.Init.Prescaler         = prescalerValue;
@@ -364,14 +371,16 @@ MX_TIM2_Init(void) {
     if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK) {
         Error_Handler();
     }
-    // if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
-    //     Error_Handler();
-    // }
     sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
     sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
         Error_Handler();
     }
+/*    
+    if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
+         Error_Handler();
+    }
+    TIM_OC_InitTypeDef sConfigOC = {0};
     sConfigOC.OCMode     = TIM_OCMODE_PWM1;
     sConfigOC.Pulse      = 0;
     sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
@@ -379,6 +388,7 @@ MX_TIM2_Init(void) {
     if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK) {
         Error_Handler();
     }
+*/        
 }
 
 
@@ -400,6 +410,7 @@ MX_USART2_UART_Init(void) {
 
 static void 
 MX_DMA_Init(void) {
+
     __HAL_RCC_DMA1_CLK_ENABLE(); // Used by DAC & UART2
     __HAL_RCC_DMA2_CLK_ENABLE(); // Used by ADC1 & ADC2
     #ifdef DAC_CHAN1
@@ -441,6 +452,14 @@ MX_GPIO_Init(void) {
     HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
     HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
     HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_RESET);
+
+    // Ramp Trigger Output Pin (RampTrigger_Pin)
+    GPIO_InitStruct.Pin   = RampTrigger_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(RampTrigger_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
 
     // Ramp Push Buttons: RampMinPB_Pin, RampMaxPB_Pin, RampStartPB_Pin
     GPIO_InitStruct.Pin = RampMinPB_Pin | RampMaxPB_Pin | RampStartPB_Pin;
@@ -558,3 +577,31 @@ HAL_UART_ErrorCallback(UART_HandleTypeDef* UartHandle) {
 }
 
 
+// Poichè non riesco a generare una secoda rampa sul device
+// utilizzato per l'esperimento, introduco un trigger tramite
+// una GPIO
+#ifdef DAC_CHAN1
+void
+HAL_DAC_ConvHalfCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
+    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_SET);
+}
+
+
+void
+HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
+    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
+}
+
+#else
+
+void
+HAL_DACEx_ConvHalfCpltCallbackCh2(DAC_HandleTypeDef *hdac) {
+    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_SET);
+}
+
+
+void
+HAL_DACEx_ConvCpltCallbackCh2(DAC_HandleTypeDef *hdac) {
+    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
+}
+#endif

@@ -237,7 +237,7 @@ DMA1_Stream5_IRQHandler(void) {
   */
 void 
 DMA1_Stream6_IRQHandler(void) {
-    /* USER CODE BEGIN DMA1_Stream5_IRQn 0 */
+    /* USER CODE BEGIN DMA1_Stream6_IRQn 0 */
     /* USER CODE END DMA1_Stream6_IRQn 0 */
     HAL_DMA_IRQHandler(&hdma_dac);
     /* USER CODE BEGIN DMA1_Stream6_IRQn 1 */

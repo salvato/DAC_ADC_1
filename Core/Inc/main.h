@@ -73,6 +73,11 @@ void Error_Handler(void);
     #define DAC1_CHANNEL DAC1_CHANNEL_2
 #endif
 
+
+#define RampTrigger_Pin       GPIO_PIN_10
+#define RampTrigger_GPIO_Port GPIOA
+
+
 #define RampMinLed_Pin   GPIO_PIN_13
 #define RampMaxLed_Pin   GPIO_PIN_14
 #define RampStartLed_Pin GPIO_PIN_15
