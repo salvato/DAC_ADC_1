@@ -1,6 +1,6 @@
 {
-    "cortex-debug.armToolchainPath": "/opt/st/stm32cubeclt_1.19.0/GNU-tools-for-STM32/bin",
-    "cortex-debug.openocdPath": "/usr/local/bin/openocd",
+    "cortex-debug.armToolchainPath": "/home/gabriele/.config/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-dev-tools/arm-none-eabi-gcc/14.2.1-1.1.1/.content/bin",
+    "cortex-debug.openocdPath": "/home/gabriele/.config/Code/User/globalStorage/bmd.stm32-for-vscode/@xpack-dev-tools/openocd/0.12.0-7.1/.content/bin/openocd",
     "files.associations": {
         "main.h": "c",
         "stm32f4xx_hal_adc_ex.h": "c",

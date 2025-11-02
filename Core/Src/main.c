@@ -192,8 +192,8 @@ execCommand() {
 int 
 main(void) {
     HAL_Init();
+    HAL_Delay(2000); // WAITING FOR A STABLE POWER: Power Supply is VERY BAD.
     SystemClockHSE_Config();
-//    HAL_Delay(3000);
     
     MX_GPIO_Init();
     MX_DMA_Init();
@@ -292,7 +292,7 @@ SystemClockHSE_Config(void) {
    /* Activate the OverDrive to reach the 180 MHz Frequency */  
   ret = HAL_PWREx_EnableOverDrive();
   if(ret != HAL_OK) {
-        while(1) { ; }
+        Error_Handler();
   }
   /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 
      clocks dividers */
@@ -413,7 +413,6 @@ MX_USART2_UART_Init(void) {
 
 static void 
 MX_DMA_Init(void) {
-
     __HAL_RCC_DMA1_CLK_ENABLE(); // Used by DAC & UART2
     __HAL_RCC_DMA2_CLK_ENABLE(); // Used by ADC1 & ADC2
     #ifdef DAC_CHAN1
@@ -491,34 +490,38 @@ MX_GPIO_Init(void) {
 void 
 Error_Handler(void) {
     __disable_irq();
-    while (1) {
-        for(int i=0; i<10; i++) {
-            #ifdef DAC_CHAN1
-                 HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-            #endif
-            for(int x=0; x<200; x++) {
-                for(int j=0; j<15000; j++) {
-                    asm __volatile__ ("nop");
-                }
-            }
-        }
-        for(int i=0; i<10; i++) {
-            #ifdef DAC_CHAN1
-                 HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-            #endif
-            for(int x=0; x<600; x++) {
-                for(int j=0; j<15000; j++) {
-                    asm __volatile__ ("nop");
-                }
+    for(int i=0; i<10; i++) {
+        #ifdef DAC_CHAN1
+                HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+        #else
+                HAL_GPIO_TogglePin(RampTrigger_GPIO_Port, RampTrigger_Pin);
+        #endif
+        for(int x=0; x<200; x++) {
+            for(int j=0; j<15000; j++) {
+                asm __volatile__ ("nop");
             }
         }
     }
+    for(int i=0; i<10; i++) {
+        #ifdef DAC_CHAN1
+                HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+        #else
+                HAL_GPIO_TogglePin(RampTrigger_GPIO_Port, RampTrigger_Pin);
+        #endif
+        for(int x=0; x<600; x++) {
+            for(int j=0; j<15000; j++) {
+                asm __volatile__ ("nop");
+            }
+        }
+    }
+    NVIC_SystemReset();
 }
 
 
 #ifdef  USE_FULL_ASSERT
 void
 assert_failed(uint8_t *file, uint32_t line) {
+    NVIC_SystemReset();
 }
 #endif /* USE_FULL_ASSERT */
 
