@@ -490,38 +490,39 @@ MX_GPIO_Init(void) {
 void 
 Error_Handler(void) {
     __disable_irq();
-    for(int i=0; i<10; i++) {
-        #ifdef DAC_CHAN1
-                HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-        #else
-                HAL_GPIO_TogglePin(RampTrigger_GPIO_Port, RampTrigger_Pin);
-        #endif
-        for(int x=0; x<200; x++) {
-            for(int j=0; j<15000; j++) {
-                asm __volatile__ ("nop");
+    while(1) {
+        // Blink rapidly
+        for(int i=0; i<10; i++) {
+            #ifdef DAC_CHAN1
+                    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+            #else
+                    HAL_GPIO_TogglePin(RampTrigger_GPIO_Port, RampTrigger_Pin);
+            #endif
+            for(int x=0; x<200; x++) {
+                for(int j=0; j<15000; j++) {
+                    asm __volatile__ ("nop");
+                }
+            }
+        }
+        for(int i=0; i<10; i++) {
+            #ifdef DAC_CHAN1
+                    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+            #else
+                    HAL_GPIO_TogglePin(RampTrigger_GPIO_Port, RampTrigger_Pin);
+            #endif
+            for(int x=0; x<600; x++) {
+                for(int j=0; j<1500; j++) {
+                    asm __volatile__ ("nop");
+                }
             }
         }
     }
-    for(int i=0; i<10; i++) {
-        #ifdef DAC_CHAN1
-                HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-        #else
-                HAL_GPIO_TogglePin(RampTrigger_GPIO_Port, RampTrigger_Pin);
-        #endif
-        for(int x=0; x<600; x++) {
-            for(int j=0; j<15000; j++) {
-                asm __volatile__ ("nop");
-            }
-        }
-    }
-    NVIC_SystemReset();
 }
 
 
 #ifdef  USE_FULL_ASSERT
 void
 assert_failed(uint8_t *file, uint32_t line) {
-    NVIC_SystemReset();
 }
 #endif /* USE_FULL_ASSERT */
 

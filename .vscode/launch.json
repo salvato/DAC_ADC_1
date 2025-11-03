@@ -3,7 +3,7 @@
         {
             "showDevDebugOutput": "parsed",
             "cwd": "${workspaceRoot}",
-            "executable": "./build/DAC_ADC_1.elf",
+            "executable": "./build/debug/DAC_ADC_1.elf",
             "name": "Debug STM32",
             "request": "launch",
             "type": "cortex-debug",
@@ -14,12 +14,12 @@
                 "openocd.cfg"
             ],
             "svdFile": "STM32F446.svd",
-            "armToolchainPath": "/opt/st/stm32cubeclt_1.19.0/GNU-tools-for-STM32/bin"
+            "armToolchainPath": "/usr/bin"
         },
         {
             "showDevDebugOutput": "parsed",
             "cwd": "${workspaceRoot}",
-            "executable": "./build/DAC_ADC_1.elf",
+            "executable": "./build/debug/DAC_ADC_1.elf",
             "name": "Attach STM32",
             "request": "attach",
             "type": "cortex-debug",
