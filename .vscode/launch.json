@@ -13,8 +13,7 @@
             "configFiles": [
                 "openocd.cfg"
             ],
-            "svdFile": "STM32F446.svd",
-            "armToolchainPath": "/usr/bin"
+            "svdFile": "STM32F446.svd"
         },
         {
             "showDevDebugOutput": "parsed",

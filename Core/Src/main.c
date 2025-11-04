@@ -5,6 +5,15 @@
 
 
 // =======================================================
+// Per comunicare con il dispositivo tramite porta USB
+// attraverso il programa "minicom" su Linux:
+//
+// $ minicom -D /dev/ttyACM0 -b 115200
+// =======================================================
+
+
+ 
+// =======================================================
 // // Modificato main.h per scegliere il canale DAC_CHAN2.
 // !!! Ho interrotto, sulla Board, SB21 in modo da 
 //     scollegare LD2 da PA5 (DAC_OUT2) !!!
@@ -13,21 +22,19 @@
 
 // Used Pins:
 // ===========================================
-// PA0  ADC1_IN0 Analog Input Values (Ramp)
-// PA1  ADC1_IN1 Analog Input Values (Sensor)
-// PA2  USART2_TX
-// PA3  USART2_RX
-// PA4  DAC_OUT1 Ramp Generator
-// PA5  DAC_OUT2 Ramp Generator
-// PA10 Ramp Trigger Output (D2 sul connettore Arduino CN9)
+// PA0  ADC1_IN0 Analog Input Values (Ramp)     (A0  sul connettore Arduino CN8)
+// PA1  ADC1_IN1 Analog Input Values (Sensor)   (A1  sul connettore Arduino CN8)
+// PA2  USART2_TX                               (D1  sul connettore Arduino CN9)
+// PA3  USART2_RX                               (D0  sul connettore Arduino CN9)   
+// PA4  DAC_OUT1 Ramp Generator                 (A2  sul connettore Arduino CN8)   
+// PA5  DAC_OUT2 Ramp Generator                 (D13 sul connettore Arduino CN9)
+// PA10 Ramp Trigger Output                     (D2  sul connettore Arduino CN9)
 // PB4  Ramp Min Push Button
 // PB5  Ramp Max Push Button
 // PB6  Start Ramp Push Button
 // PB13 Ramp Running Led Indicator
 // PB14 Ramp At Min Led Indicator
 // PB15 Ramp At Max Led Indicator
-// PC0  ADC2_IN10 Ramp Min Value Selection
-// PC1  ADC2_IN11 Ramp Max Value Selection
 // PC13 Blue Push Button
 // ===========================================
 
@@ -36,8 +43,6 @@
 // DAC  Out2 ==> PA5 Ramp Generator
 // ADC1 In0  ==> PA0 Ramp Input Values
 // ADC1 In1  ==> PA1 Sensor Input Values
-// ADC2_In10 ==> PC0 Ramp Min Value Selection
-// ADC2_In11 ==> PC1 Ramp Max Value Selection
 // LD2 Disabled since it conflicts with DAC Out2 <<=======
 //==========================================================//
 // ATTENZIONE:                                              //
@@ -51,24 +56,22 @@
 // definizione di DAC_CHAN1 in "main.h"                     // 
 //==========================================================//
 
-DAC_HandleTypeDef  hdac;
-DMA_HandleTypeDef  hdma_dac;
-
-TIM_HandleTypeDef  htim2;
-
-UART_HandleTypeDef huart2;
-
-
-static void SystemClockHSE_Config(void) ;
-static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
-static void MX_USART2_UART_Init(void);
-static void MX_DAC_Init(void);
-static void MX_TIM2_Init(void);
-static void buildRamp(uint16_t min, uint16_t max);
-static void startAcquisition();
-static void stopAcquisition();
-static void execCommand();
+//============
+// Error Codes
+//============
+#define ERROR_NONE           0
+#define ERROR_DAC_INIT       1
+#define ERROR_DAC_CHANNEL    2
+#define ERROR_TIM2_INIT      3
+#define ERROR_TIM2_START     4
+#define ERROR_TIM2_STOP      5
+#define ERROR_UART2_INIT     6 
+#define ERROR_START_ACQ      7
+#define ERROR_STOP_ACQ       8
+#define ERROR_UART_TX        9
+#define ERROR_UART_RX       10
+#define ERROR_UART_CB       11
+#define ERROR_UNKNOWN       20
 
 //#define DEBUG        // Define this if debugging with a LED connected to DAC Out
 
@@ -89,12 +92,47 @@ static void execCommand();
     #define RAMP_FREQUENCY 20 // Hz
 #endif
 
+int errorCode = ERROR_NONE;
+
+//==========================
+// Peripheral Handles
+//==========================
+DAC_HandleTypeDef  hdac;
+DMA_HandleTypeDef  hdma_dac;
+ADC_HandleTypeDef  hadc1;
+DMA_HandleTypeDef  hdma_adc1;
+TIM_HandleTypeDef  htim2;
+UART_HandleTypeDef huart2;
+
+//==========================
+// Function Prototypes
+//==========================
+void Error_Handler(void);
+static void SystemClockHSE_Config(void) ;
+static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
+static void MX_USART2_UART_Init(void);
+static void MX_DAC_Init(void);
+static void MX_ADC1_Init(void);
+static void MX_TIM2_Init(void);
+static void buildRamp(uint16_t min, uint16_t max);
+static void startAcquisition();
+static void stopAcquisition();
+static void execCommand();
+
 typedef uint8_t bool;
 #define false 0
 #define true  !false
 
 #define NS 4096
 uint16_t Ramp[NS];      // Output Ramp
+uint16_t adc1Val[4*NS]; // Space for two Ramps (double buffer)
+uint32_t sensBuff[NS];
+uint32_t rampBuff[NS];
+uint32_t nAvgSens;
+uint32_t maxAvgSens = (0xFFFFFFFF >> 12)-2;
+uint32_t avgSens[NS];
+uint32_t avgRamp[NS];
 
 uint16_t rampMin;
 uint16_t rampMax;
@@ -102,8 +140,11 @@ uint16_t rampMax;
 __IO bool pbPressed     = false;
 __IO bool bCharPresent  = false;
 __IO bool bUartReady    = false;
+__IO bool adc1HalfReady = false;
+__IO bool adc1FullReady = false;
 
 
+uint8_t outBuff[80];
 uint8_t rxBuffer[1];
 uint8_t command;
 
@@ -112,7 +153,7 @@ void
 buildRamp(uint16_t min, uint16_t max) {
     float factor = (float)(max-min)/(float)NS;
     for(int16_t i=0; i<NS; i++) {
-        Ramp[i] = (uint16_t)(min+factor*i);
+        Ramp[i] = (uint16_t)(min+factor*i+0.5);
         //Ramp[i] = (uint16_t)(max-factor*i); // Rampa inversa...
     }
 }
@@ -120,39 +161,65 @@ buildRamp(uint16_t min, uint16_t max) {
 
 void
 startAcquisition() {
-    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
-    if(HAL_DAC_Start_DMA(&hdac, DAC1_CHANNEL, (uint32_t*)Ramp, NS, DAC_ALIGN_12B_R))
-        Error_Handler(); 
+    nAvgSens = 0;
+    memset(avgSens, 0, sizeof(avgSens));
+    memset(avgRamp, 0, sizeof(avgRamp));
 
-    if(HAL_TIM_Base_Start(&htim2))
+    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
+
+    if(HAL_DAC_Start_DMA(&hdac, DAC1_CHANNEL, (uint32_t*)Ramp, NS, DAC_ALIGN_12B_R)) {
+        errorCode = ERROR_START_ACQ;
         Error_Handler();
-    
-    // start pwm generation (is This needed ?)
-    // if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1))
-    //     Error_Handler();
+    }
+
+    if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adc1Val, 4*NS)) {
+        errorCode = ERROR_START_ACQ;
+        Error_Handler(); 
+    }
+
+    if(HAL_TIM_Base_Start(&htim2)) {
+        errorCode = ERROR_TIM2_START;
+        Error_Handler();
+    }
 }
 
 
 void
 stopAcquisition() {
     HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
-    if(HAL_TIM_Base_Stop(&htim2))
+    if(HAL_TIM_Base_Stop(&htim2)) {
+        errorCode = ERROR_TIM2_STOP;
         Error_Handler();
-    if(HAL_DAC_Stop_DMA(&hdac, DAC1_CHANNEL))
-        Error_Handler(); 
+    }
+    if(HAL_ADC_Stop_DMA(&hadc1)) {
+        errorCode = ERROR_STOP_ACQ;
+        Error_Handler();
+    }
+    if(HAL_DAC_Stop_DMA(&hdac, DAC1_CHANNEL)) {
+        errorCode = ERROR_STOP_ACQ;
+        Error_Handler();
+    }
 }
 
 
 static void
 execCommand() {
+    sprintf((char*)outBuff, "%c\n\r", (char)command);
+    HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
     if(command == 'S') {
         stopAcquisition();
+        for(int i=0; i<NS; i++) {
+            sprintf((char*)outBuff, "i=%d Ramp=%d Dac=%ld Sensor=%ld\n\r",
+                            i, Ramp[i], avgRamp[i]/nAvgSens, avgSens[i]/nAvgSens);
+            HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
+        }
         buildRamp(rampMin, rampMax);
         startAcquisition();
         HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_SET);
     } // Command "S"
+
     else if(command == 'R') {
         stopAcquisition();
         buildRamp(rampMin, rampMax);
@@ -161,6 +228,7 @@ execCommand() {
         HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_SET);
     } // Command "R"
+
     else if(command == 'A') {
         stopAcquisition();
         buildRamp(rampMin, rampMax);
@@ -169,6 +237,7 @@ execCommand() {
         HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_SET);
     } // Command "A"
+
     else if(command == 'M') {
         stopAcquisition();
         buildRamp(rampMax, rampMax);
@@ -177,7 +246,8 @@ execCommand() {
         HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_SET);
         HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_RESET);
 
-    } // Command "M"
+    } // Command "m"
+
     else if(command == 'm') {
         stopAcquisition();
         buildRamp(rampMin, rampMin);
@@ -192,11 +262,14 @@ execCommand() {
 int 
 main(void) {
     HAL_Init();
-    HAL_Delay(2000); // WAITING FOR A STABLE POWER: Power Supply is VERY BAD.
+    // WAITING FOR A STABLE POWER: Power Supply is VERY BAD.
+    HAL_Delay(2000); 
+
     SystemClockHSE_Config();
     
     MX_GPIO_Init();
     MX_DMA_Init();
+    MX_ADC1_Init();
     MX_DAC_Init();
     MX_TIM2_Init();
     MX_USART2_UART_Init();
@@ -204,27 +277,66 @@ main(void) {
     while(HAL_UART_GetState(&huart2) != HAL_UART_STATE_READY);
     bCharPresent = false;
     if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
+        errorCode = ERROR_UART_RX;
         Error_Handler();
     }
 
     rampMin = 0;
     rampMax = 4095;
-    command = 'R';
-    execCommand();
+    buildRamp(rampMin, rampMax);
+
+    adc1HalfReady=false;
+    adc1FullReady=false;
+    nAvgSens = 0;
+
+    startAcquisition();
+    HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, RampMaxLed_Pin,   GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, RampStartLed_Pin, GPIO_PIN_SET);
 
     while(true) {
+
+        if(adc1HalfReady) {
+            adc1HalfReady = false;
+            for(int i=0; i<NS; i++) {
+                avgRamp[i] += adc1Val[2*i];
+                avgSens[i] += adc1Val[2*i+1];
+            }
+            nAvgSens++;
+            if(nAvgSens > maxAvgSens) {
+                stopAcquisition();
+                pbPressed = true;
+            }
+        }
+
+        if(adc1FullReady) {
+            adc1FullReady = false;
+            for(int i=0; i<NS; i++) {
+                avgRamp[i] += adc1Val[2*NS+2*i];
+                avgSens[i] += adc1Val[2*NS+2*i+1];
+            }
+            nAvgSens++;
+            if(nAvgSens > maxAvgSens) {
+                stopAcquisition();
+                pbPressed = true;
+            }
+        }
+
         if(pbPressed) {
             pbPressed = false;
             execCommand();
         }
+
         if(bCharPresent) {
             bCharPresent = false;
             command = rxBuffer[0];
             execCommand();
             if(HAL_UART_Receive_IT(&huart2, (uint8_t *)rxBuffer, 1) != HAL_OK) {
+                errorCode = ERROR_UART_RX;
                 Error_Handler();
             }
         }
+
     } // while(true)
 }
 
@@ -317,17 +429,52 @@ SystemClockHSE_Config(void) {
 
 
 static void
+MX_ADC1_Init(void) {
+    ADC_ChannelConfTypeDef sConfig = {0};
+
+    hadc1.Instance = ADC1;
+    hadc1.Init.ClockPrescaler        = ADC_CLOCK_SYNC_PCLK_DIV4; // The clock is common for all the ADCs.
+    hadc1.Init.Resolution            = ADC_RESOLUTION_12B;
+    hadc1.Init.ScanConvMode          = ENABLE;
+    hadc1.Init.ContinuousConvMode    = DISABLE;
+    hadc1.Init.DiscontinuousConvMode = DISABLE;
+    hadc1.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_RISING;
+    hadc1.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T2_TRGO;
+    hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+    hadc1.Init.NbrOfConversion       = 2;
+    hadc1.Init.DMAContinuousRequests = ENABLE;
+    hadc1.Init.EOCSelection          = ADC_EOC_SEQ_CONV;
+    if (HAL_ADC_Init(&hadc1) != HAL_OK) {
+        Error_Handler();
+    }
+    // The total conversion time is calculated as follows:
+    // Tconv = ADC_SAMPLETIME + 12 cycles
+    sConfig.Channel      = ADC_CHANNEL_0;
+    sConfig.Rank         = 1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_28CYCLES;//ADC_SAMPLETIME_3CYCLES;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_1;
+    sConfig.Rank         = 2;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
+        Error_Handler();
+    }
+}
+
+
+static void
 MX_DAC_Init(void) {
     DAC_ChannelConfTypeDef sConfig = {0};
     hdac.Instance = DAC1;
     if (HAL_DAC_Init(&hdac) != HAL_OK) {
+        errorCode = ERROR_DAC_INIT;
         Error_Handler();
     }
-/*
-    Each time the DAC detects a rising edge on the selected timer TRGO output (T2_TRGO), 
-    the last data stored into the DAC_DHRx register are transferred into the DAC_DORx 
-    register.
-*/
+//==========================================================================================
+//  Each time the DAC detects a rising edge on the selected timer TRGO output (T2_TRGO), the
+//  last data stored into the DAC_DHRx register are transferred into the DAC_DORx register.
+//==========================================================================================
     sConfig.DAC_Trigger          = DAC_TRIGGER_T2_TRGO;
     #ifdef DAC_BUFFERED
         sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
@@ -336,10 +483,12 @@ MX_DAC_Init(void) {
     #endif
     #ifdef DAC_CHAN1
         if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_1) != HAL_OK) {
+            errorCode = ERROR_DAC_CHANNEL;
             Error_Handler();
         }
     #else
         if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_2) != HAL_OK) {
+            errorCode = ERROR_DAC_CHANNEL;
             Error_Handler();
         }
     #endif
@@ -354,6 +503,7 @@ MX_TIM2_Init(void) {
     uint32_t prescalerValue = 1;
     uint32_t periodValue = (uint32_t)((clock)/(RAMP_FREQUENCY*NS));
     if(periodValue < 2) {
+        errorCode = ERROR_TIM2_INIT;
         Error_Handler();
     }
     periodValue -= 1;
@@ -368,30 +518,20 @@ MX_TIM2_Init(void) {
     htim2.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
     htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
     if (HAL_TIM_Base_Init(&htim2) != HAL_OK) {
+        errorCode = ERROR_TIM2_INIT;
         Error_Handler();
     }
     sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
     if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK) {
+        errorCode = ERROR_TIM2_INIT;
         Error_Handler();
     }
     sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
     sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK) {
+        errorCode = ERROR_TIM2_INIT;
         Error_Handler();
     }
-/*    
-    if (HAL_TIM_PWM_Init(&htim2) != HAL_OK) {
-         Error_Handler();
-    }
-    TIM_OC_InitTypeDef sConfigOC = {0};
-    sConfigOC.OCMode     = TIM_OCMODE_PWM1;
-    sConfigOC.Pulse      = 0;
-    sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-    sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-    if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK) {
-        Error_Handler();
-    }
-*/        
 }
 
 
@@ -406,6 +546,7 @@ MX_USART2_UART_Init(void) {
     huart2.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
     huart2.Init.OverSampling = UART_OVERSAMPLING_16;
     if (HAL_UART_Init(&huart2) != HAL_OK) {
+        errorCode = ERROR_UART2_INIT;
         Error_Handler();
     }
 }
@@ -424,6 +565,10 @@ MX_DMA_Init(void) {
         HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
         HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
     #endif
+
+    /* DMA2_Stream0_IRQn interrupt configuration (ADC1) */
+    HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 }
 
 
@@ -491,19 +636,41 @@ void
 Error_Handler(void) {
     __disable_irq();
     while(1) {
-        // Blink rapidly
-        for(int i=0; i<10; i++) {
+        #ifdef DAC_CHAN1
+                HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+        #else
+                HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
+        #endif
+        for(int x=0; x<400; x++) {
+            for(int j=0; j<50000; j++) {
+                asm __volatile__ ("nop");
+            }
+        }
+
+        // Blink slowly
+        for(int i=0; i<2*errorCode; i++) {
             #ifdef DAC_CHAN1
                     HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
             #else
                     HAL_GPIO_TogglePin(RampTrigger_GPIO_Port, RampTrigger_Pin);
             #endif
             for(int x=0; x<200; x++) {
-                for(int j=0; j<15000; j++) {
+                for(int j=0; j<50000; j++) {
                     asm __volatile__ ("nop");
                 }
             }
         }
+        #ifdef DAC_CHAN1
+                HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+        #else
+                HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
+        #endif
+        for(int x=0; x<400; x++) {
+            for(int j=0; j<50000; j++) {
+                asm __volatile__ ("nop");
+            }
+        }
+        // Blink rapidly
         for(int i=0; i<10; i++) {
             #ifdef DAC_CHAN1
                     HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
@@ -580,7 +747,27 @@ HAL_UART_RxCpltCallback(UART_HandleTypeDef* UartHandle) {
   */
 void 
 HAL_UART_ErrorCallback(UART_HandleTypeDef* UartHandle) {
+    errorCode = ERROR_UART_CB;
     Error_Handler();
+}
+
+
+/// ADC Conversion_Half_Complete callback
+void
+HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hAdc) {
+    if(hAdc == &hadc1) {
+        adc1HalfReady = true;
+    }
+}
+
+
+/// ADC Conversion_Complete callback
+void
+HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hAdc) {
+    if(hAdc == &hadc1) {
+        // HAL_TIM_Base_Stop(&htim2);
+        adc1FullReady = true;
+    }
 }
 
 
@@ -588,6 +775,7 @@ HAL_UART_ErrorCallback(UART_HandleTypeDef* UartHandle) {
 // utilizzato per l'esperimento, introduco un trigger tramite
 // una GPIO
 #ifdef DAC_CHAN1
+
 void
 HAL_DAC_ConvHalfCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
     HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_SET);
@@ -599,7 +787,7 @@ HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
     HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
 }
 
-#else
+#else // DAC_CHAN2
 
 void
 HAL_DACEx_ConvHalfCpltCallbackCh2(DAC_HandleTypeDef *hdac) {
