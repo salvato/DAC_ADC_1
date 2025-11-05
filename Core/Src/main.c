@@ -21,40 +21,40 @@
 
 
 // Used Pins:
-// ===========================================
-// PA0  ADC1_IN0 Analog Input Values (Ramp)     (A0  sul connettore Arduino CN8)
-// PA1  ADC1_IN1 Analog Input Values (Sensor)   (A1  sul connettore Arduino CN8)
-// PA2  USART2_TX                               (D1  sul connettore Arduino CN9)
-// PA3  USART2_RX                               (D0  sul connettore Arduino CN9)   
-// PA4  DAC_OUT1 Ramp Generator                 (A2  sul connettore Arduino CN8)   
-// PA5  DAC_OUT2 Ramp Generator                 (D13 sul connettore Arduino CN9)
-// PA10 Ramp Trigger Output                     (D2  sul connettore Arduino CN9)
-// PB4  Ramp Min Push Button
-// PB5  Ramp Max Push Button
-// PB6  Start Ramp Push Button
-// PB13 Ramp Running Led Indicator
-// PB14 Ramp At Min Led Indicator
-// PB15 Ramp At Max Led Indicator
-// PC13 Blue Push Button
-// ===========================================
+// ===============================================================================+
+// PA0  ADC1_IN0 Analog Input Values (Ramp)     (A0  sul connettore Arduino CN8)  |
+// PA1  ADC1_IN1 Analog Input Values (Sensor)   (A1  sul connettore Arduino CN8)  |
+// PA2  USART2_TX                               (D1  sul connettore Arduino CN9)  |
+// PA3  USART2_RX                               (D0  sul connettore Arduino CN9)  |   
+// PA4  DAC_OUT1 Ramp Generator                 (A2  sul connettore Arduino CN8)  |   
+// PA5  DAC_OUT2 Ramp Generator                 (D13 sul connettore Arduino CN9)  |
+// PA10 Ramp Trigger Output                     (D2  sul connettore Arduino CN9)  |
+// PB4  Ramp Min Push Button                    (D5  sul connettore Arduino CN9)  |
+// PB5  Ramp Max Push Button                    (D4  sul connettore Arduino CN9)  |
+// PB6  Start Ramp Push Button                  (D10 sul connettore Arduino CN5)  |
+// PB13 Ramp Running Led Indicator              (PIN 30 sul connettore CN10)      |
+// PB14 Ramp At Min Led Indicator               (PIN 28 sul connettore CN10)      |
+// PB15 Ramp At Max Led Indicator               (PIN 26 sul connettore CN10)      |
+// PC13 Blue Push Button                                                          |
+// ===============================================================================+
 
 
-// =========================================================
-// DAC  Out2 ==> PA5 Ramp Generator
-// ADC1 In0  ==> PA0 Ramp Input Values
-// ADC1 In1  ==> PA1 Sensor Input Values
-// LD2 Disabled since it conflicts with DAC Out2 <<=======
-//==========================================================//
-// ATTENZIONE:                                              //
-// L'uscita 2 del DAC è connessa a PA5 che è FISICAMENTE    //
-// connesso alla serie R31 (510 OHM) --> LD2. a meno di non //
-// Interrompere il "soldering Bridge" SB21 (0 Ohm)          //
-// Questo comporta che il DAC è "caricato" e non riesce     //
-// ad erogare tutti i 3.3V che dovrebbe.                    //
-//                                                          //
-// La scelta tra DAC Out1 e DAC Out2 dipende dalla          //
-// definizione di DAC_CHAN1 in "main.h"                     // 
-//==========================================================//
+// ==========================================================+
+// DAC  Out2 ==> PA5 Ramp Generator                          |
+// ADC1 In0  ==> PA0 Ramp Input Values                       |
+// ADC1 In1  ==> PA1 Sensor Input Values                     |
+// LD2 Disabled since it conflicts with DAC Out2 <<=======   |
+//===========================================================+
+// ATTENZIONE:                                               |
+// L'uscita 2 del DAC è connessa a PA5 che è FISICAMENTE     |
+// connesso alla serie R31 (510 OHM) --> LD2. a meno di non  |
+// Interrompere il "soldering Bridge" SB21 (0 Ohm)           |
+// Questo comporta che il DAC è "caricato" e non riesce      |
+// ad erogare tutti i 3.3V che dovrebbe.                     |
+//                                                           |
+// La scelta tra DAC Out1 e DAC Out2 dipende dalla           |
+// definizione di DAC_CHAN1 in "main.h"                      | 
+//===========================================================+
 
 //============
 // Error Codes
@@ -75,7 +75,7 @@
 
 //#define DEBUG        // Define this if debugging with a LED connected to DAC Out
 
-#define BAUD_RATE 115200 //921600 //115200 //9600 //115200 //230400 //921600
+#define BAUD_RATE 115200 //9600 //115200 //230400 //921600
 
 #define HSE_BYPASS
 
@@ -103,6 +103,7 @@ ADC_HandleTypeDef  hadc1;
 DMA_HandleTypeDef  hdma_adc1;
 TIM_HandleTypeDef  htim2;
 UART_HandleTypeDef huart2;
+//DMA_HandleTypeDef  hdma_usart2_tx; // e' in conflitto con il canale 2 del DAC !!!
 
 //==========================
 // Function Prototypes
@@ -153,7 +154,7 @@ void
 buildRamp(uint16_t min, uint16_t max) {
     float factor = (float)(max-min)/(float)NS;
     for(int16_t i=0; i<NS; i++) {
-        Ramp[i] = (uint16_t)(min+factor*i+0.5);
+        Ramp[i] = (uint16_t)(min+factor*i);
         //Ramp[i] = (uint16_t)(max-factor*i); // Rampa inversa...
     }
 }
@@ -204,15 +205,15 @@ stopAcquisition() {
 
 static void
 execCommand() {
-    sprintf((char*)outBuff, "%c\n\r", (char)command);
-    HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
+    //sprintf((char*)outBuff, "%c\n\r", (char)command);
+    //HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
     if(command == 'S') {
         stopAcquisition();
         for(int i=0; i<NS; i++) {
-            sprintf((char*)outBuff, "i=%d Ramp=%d Dac=%ld Sensor=%ld\n\r",
-                            i, Ramp[i], avgRamp[i]/nAvgSens, avgSens[i]/nAvgSens);
-            HAL_UART_Transmit(&huart2, (uint8_t*)outBuff, strlen((char*)outBuff), 10);
+            avgSens[i] /= nAvgSens;
         }
+        //HAL_UART_Transmit_DMA(&huart2, (uint8_t*)avgSens, NS*4); // E' in conflitto con il DAC Canale 2 !!!
+        HAL_UART_Transmit(&huart2, (uint8_t*)avgSens, NS*4, 5000);
         buildRamp(rampMin, rampMax);
         startAcquisition();
         HAL_GPIO_WritePin(GPIOB, RampMinLed_Pin,   GPIO_PIN_RESET);
@@ -569,6 +570,10 @@ MX_DMA_Init(void) {
     /* DMA2_Stream0_IRQn interrupt configuration (ADC1) */
     HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+
+    /* DMA1_Stream6_IRQn interrupt configuration (USART2_TX)  in conflitto col DAC canale 2 */
+    //HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
+    //HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
 }
 
 
@@ -775,28 +780,34 @@ HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hAdc) {
 // utilizzato per l'esperimento, introduco un trigger tramite
 // una GPIO
 #ifdef DAC_CHAN1
+    void
+    HAL_DAC_ConvHalfCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
+        HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_SET);
+    }
 
-void
-HAL_DAC_ConvHalfCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
-    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_SET);
-}
 
-
-void
-HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
-    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
-}
+    void
+    HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
+        HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
+    }
 
 #else // DAC_CHAN2
 
-void
-HAL_DACEx_ConvHalfCpltCallbackCh2(DAC_HandleTypeDef *hdac) {
-    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_SET);
-}
+    void
+    HAL_DACEx_ConvHalfCpltCallbackCh2(DAC_HandleTypeDef *hdac) {
+        HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_SET);
+    }
 
 
-void
-HAL_DACEx_ConvCpltCallbackCh2(DAC_HandleTypeDef *hdac) {
-    HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
-}
+    void
+    HAL_DACEx_ConvCpltCallbackCh2(DAC_HandleTypeDef *hdac) {
+        HAL_GPIO_WritePin(RampTrigger_GPIO_Port, RampTrigger_Pin, GPIO_PIN_RESET);
+    }
 #endif
+
+// In conflitto con il DAC Canale 2
+//void
+//HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart) {
+//}
+
+// End of File

@@ -26,6 +26,8 @@
 
 extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_dac;
+extern UART_HandleTypeDef huart2;
+extern DMA_HandleTypeDef hdma_usart2_tx;
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
@@ -339,6 +341,27 @@ HAL_UART_MspInit(UART_HandleTypeDef* huart) {
         HAL_NVIC_EnableIRQ(USART2_IRQn);
         /* USER CODE BEGIN USART2_MspInit 1 */
         /* USER CODE END USART2_MspInit 1 */
+
+/* In conflitto con il DAC Canale 2
+
+        // DMA controller clock enable
+        __DMA1_CLK_ENABLE();
+
+        // Peripheral DMA init
+        hdma_usart2_tx.Instance                 = DMA1_Stream6;
+        hdma_usart2_tx.Init.Channel             = DMA_CHANNEL_4;
+        hdma_usart2_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
+        hdma_usart2_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
+        hdma_usart2_tx.Init.MemInc              = DMA_MINC_ENABLE;
+        hdma_usart2_tx.Init.PeriphDataAlignment = DMA_MDATAALIGN_BYTE;
+        hdma_usart2_tx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
+        hdma_usart2_tx.Init.Mode                = DMA_NORMAL;
+        hdma_usart2_tx.Init.Priority            = DMA_PRIORITY_LOW;
+        hdma_usart2_tx.Init.FIFOMode            = DMA_FIFOMODE_DISABLE;
+        HAL_DMA_Init(&hdma_usart2_tx);
+
+        __HAL_LINKDMA(&huart2, hdmatx, hdma_usart2_tx);
+*/
     }
 }
 
