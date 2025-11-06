@@ -4,20 +4,34 @@
 #include <stdlib.h>
 
 
-// =======================================================
-// Per comunicare con il dispositivo tramite porta USB
-// attraverso il programa "minicom" su Linux:
-//
-// $ minicom -D /dev/ttyACM0 -b 115200
-// =======================================================
+// ===================================================================+
+// Programma per l'eperimento di misura dei                           |
+// "Potenziali Critici dell'atomo di Elio"                            |                                                        |
+// ===================================================================+
+
+
+// ===================================================================+
+// ATTENZIONE:                                                        |
+// Non e' possibile utilizzare l'ADC per misurare i dati del sensore  |
+// poiche' la massa del sensore DEVE essere differente dalla massa    |
+// della rampa.                                                       |
+// ===================================================================+
+
+
+// ======================================================+
+// Per comunicare con il dispositivo tramite porta USB   |
+// attraverso il programa "minicom" su Linux:            |
+//                                                       |
+// $ minicom -D /dev/ttyACM0 -b 115200                   |
+// ======================================================+
 
 
  
-// =======================================================
-// // Modificato main.h per scegliere il canale DAC_CHAN2.
-// !!! Ho interrotto, sulla Board, SB21 in modo da 
-//     scollegare LD2 da PA5 (DAC_OUT2) !!!
-// =======================================================
+// ========================================================+
+// // Modificato main.h per scegliere il canale DAC_CHAN2. |
+// !!! Ho interrotto, sulla Board, SB21 in modo da         |
+//     scollegare LD2 da PA5 (DAC_OUT2) !!!                |
+// ========================================================+
 
 
 // Used Pins:
@@ -56,9 +70,9 @@
 // definizione di DAC_CHAN1 in "main.h"                      | 
 //===========================================================+
 
-//============
-// Error Codes
-//============
+//=============+
+// Error Codes |
+//=============+
 #define ERROR_NONE           0
 #define ERROR_DAC_INIT       1
 #define ERROR_DAC_CHANNEL    2
@@ -105,9 +119,9 @@ TIM_HandleTypeDef  htim2;
 UART_HandleTypeDef huart2;
 //DMA_HandleTypeDef  hdma_usart2_tx; // e' in conflitto con il canale 2 del DAC !!!
 
-//==========================
-// Function Prototypes
-//==========================
+//======================+
+// Function Prototypes  |
+//======================+
 void Error_Handler(void);
 static void SystemClockHSE_Config(void) ;
 static void MX_GPIO_Init(void);
